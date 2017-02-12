@@ -97,7 +97,7 @@ namespace Realms
                     var metadata = TargetMetadata;
                     Stack<IntPtr> propertyIndexes = new Stack<IntPtr>();
                     var i = 0;
-                    Realms.Schema.Property property = new Property();
+                    Realms.Schema.Property property = new Realms.Schema.Property();
                     foreach (var propertyName in propertyPath)
                     {
                         if (!metadata.Schema.TryFindProperty(propertyName, out property))
@@ -114,27 +114,27 @@ namespace Realms
                         i++;
                     }
                     var lastPropertyId = propertyIndexes.Pop();
-                    if (property.Type == PropertyType.String)
+                    if (property.Type == Realms.Schema.PropertyType.String)
                     {
                         qv.CoreQueryHandle.CreateLinkQueryString(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (string)linkedQueryInfo.Value, false);
                     }
-                    else if (property.Type == PropertyType.Int)
+                    else if (property.Type == Realms.Schema.PropertyType.Int)
                     {
                         qv.CoreQueryHandle.CreateLinkQueryInt(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (int)linkedQueryInfo.Value);
                     }
-                    else if (property.Type == PropertyType.Bool)
+                    else if (property.Type == Realms.Schema.PropertyType.Bool)
                     {
                         qv.CoreQueryHandle.CreateLinkQueryBool(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (bool)linkedQueryInfo.Value);
                     }
-                    else if (property.Type == PropertyType.Float)
+                    else if (property.Type == Realms.Schema.PropertyType.Float)
                     {
                         qv.CoreQueryHandle.CreateLinkQueryFloat(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (float)linkedQueryInfo.Value);
                     }
-                    else if (property.Type == PropertyType.Double)
+                    else if (property.Type == Realms.Schema.PropertyType.Double)
                     {
                         qv.CoreQueryHandle.CreateLinkQueryDouble(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (double)linkedQueryInfo.Value);
                     }
-                    else if (property.Type == PropertyType.Date)
+                    else if (property.Type == Realms.Schema.PropertyType.Date)
                     {
                         qv.CoreQueryHandle.CreateLinkQueryDate(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (DateTimeOffset)linkedQueryInfo.Value);
                     }
