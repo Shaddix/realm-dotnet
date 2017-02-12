@@ -179,6 +179,34 @@ namespace Realms
             public static extern IntPtr get_column_index(QueryHandle queryPtr,
                         [MarshalAs(UnmanagedType.LPWStr)] string columnName, IntPtr columnNameLen, out NativeException ex);
 
+            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_get_table_link", CallingConvention = CallingConvention.Cdecl)]
+            public static extern IntPtr get_table_link(QueryHandle queryPtr, IntPtr columnNameLen, out NativeException ex);
+
+            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_and", CallingConvention = CallingConvention.Cdecl)]
+            public static extern void query_and(QueryHandle queryPtr, QueryHandle linkQueryPtr, out NativeException ex);
+
+            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_link_add_string_comparison", CallingConvention = CallingConvention.Cdecl)]
+            public static extern void link_add_string_comparison(QueryHandle queryPtr, IntPtr[] linkColumnIndexes, IntPtr linkColumnIndexesLength, IntPtr columnIndex, IntPtr predicateOperator,
+                [MarshalAs(UnmanagedType.LPWStr)] string value, IntPtr valueLen, [MarshalAs(UnmanagedType.I1)] bool caseSensitive, out NativeException ex);
+
+            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_link_add_int_comparison", CallingConvention = CallingConvention.Cdecl)]
+            public static extern void link_add_int_comparison(QueryHandle queryPtr, IntPtr[] linkColumnIndexes, IntPtr linkColumnIndexesLength, IntPtr columnIndex, IntPtr predicateOperator, IntPtr value, out NativeException ex);
+
+            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_link_add_bool_comparison", CallingConvention = CallingConvention.Cdecl)]
+            public static extern void link_add_bool_comparison(QueryHandle queryPtr, IntPtr[] linkColumnIndexes, IntPtr linkColumnIndexesLength, IntPtr columnIndex, IntPtr predicateOperator, IntPtr value, out NativeException ex);
+
+            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_link_add_float_comparison", CallingConvention = CallingConvention.Cdecl)]
+            public static extern void link_add_float_comparison(QueryHandle queryPtr, IntPtr[] linkColumnIndexes, IntPtr linkColumnIndexesLength, IntPtr columnIndex, IntPtr predicateOperator, Single value, out NativeException ex);
+
+            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_link_add_double_comparison", CallingConvention = CallingConvention.Cdecl)]
+            public static extern void link_add_double_comparison(QueryHandle queryPtr, IntPtr[] linkColumnIndexes, IntPtr linkColumnIndexesLength, IntPtr columnIndex, IntPtr predicateOperator, Double value, out NativeException ex);
+
+            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_link_add_date_comparison", CallingConvention = CallingConvention.Cdecl)]
+            public static extern void link_add_date_comparison(QueryHandle queryPtr, IntPtr[] linkColumnIndexes, IntPtr linkColumnIndexesLength, IntPtr columnIndex, IntPtr predicateOperator, Int64 value, out NativeException ex);
+
+            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_link_add_long_comparison", CallingConvention = CallingConvention.Cdecl)]
+            public static extern void link_add_long_comparison(QueryHandle queryPtr, IntPtr[] linkColumnIndexes, IntPtr linkColumnIndexesLength, IntPtr columnIndex, IntPtr predicateOperator, Int64 value, out NativeException ex);
+
             [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_not", CallingConvention = CallingConvention.Cdecl)]
             public static extern void not(QueryHandle queryHandle, out NativeException ex);
 
@@ -547,6 +575,71 @@ namespace Realms
             var result = NativeMethods.get_column_index(this, columnName, (IntPtr)columnName.Length, out nativeException);
             nativeException.ThrowIfNecessary();
             return result;
+        }
+
+        public IntPtr GetLinkTable(string columnName)
+        {
+            NativeException nativeException;
+            var columnIndex = this.GetColumnIndex(columnName);
+            var result = NativeMethods.get_table_link(this, columnIndex, out nativeException);
+            nativeException.ThrowIfNecessary();
+            return result;
+        }
+
+        public void AndQuery(QueryHandle query)
+        {
+            NativeException nativeException;
+            NativeMethods.query_and(this, query, out nativeException);
+            nativeException.ThrowIfNecessary();
+        }
+
+        public void CreateLinkQueryString(IntPtr[] linkColumnIndexes, IntPtr columnIndex, PredicateOperator predicateOperator, string value, bool caseSensitive)
+        {
+            NativeException nativeException;
+            NativeMethods.link_add_string_comparison(this, linkColumnIndexes, new IntPtr(linkColumnIndexes.Length), columnIndex, new IntPtr((int)predicateOperator), value, (IntPtr)value.Length, caseSensitive, out nativeException);
+            nativeException.ThrowIfNecessary();
+        }
+
+        public void CreateLinkQueryInt(IntPtr[] linkColumnIndexes, IntPtr columnIndex, PredicateOperator predicateOperator, int value)
+        {
+            NativeException nativeException;
+            NativeMethods.link_add_int_comparison(this, linkColumnIndexes, new IntPtr(linkColumnIndexes.Length), columnIndex, new IntPtr((int)predicateOperator), new IntPtr(value), out nativeException);
+            nativeException.ThrowIfNecessary();
+        }
+
+        public void CreateLinkQueryLong(IntPtr[] linkColumnIndexes, IntPtr columnIndex, PredicateOperator predicateOperator, long value)
+        {
+            NativeException nativeException;
+            NativeMethods.link_add_long_comparison(this, linkColumnIndexes, new IntPtr(linkColumnIndexes.Length), columnIndex, new IntPtr((int)predicateOperator), value, out nativeException);
+            nativeException.ThrowIfNecessary();
+        }
+
+        public void CreateLinkQueryDouble(IntPtr[] linkColumnIndexes, IntPtr columnIndex, PredicateOperator predicateOperator, double value)
+        {
+            NativeException nativeException;
+            NativeMethods.link_add_double_comparison(this, linkColumnIndexes, new IntPtr(linkColumnIndexes.Length), columnIndex, new IntPtr((int)predicateOperator), value, out nativeException);
+            nativeException.ThrowIfNecessary();
+        }
+
+        public void CreateLinkQueryFloat(IntPtr[] linkColumnIndexes, IntPtr columnIndex, PredicateOperator predicateOperator, float value)
+        {
+            NativeException nativeException;
+            NativeMethods.link_add_float_comparison(this, linkColumnIndexes, new IntPtr(linkColumnIndexes.Length), columnIndex, new IntPtr((int)predicateOperator), value, out nativeException);
+            nativeException.ThrowIfNecessary();
+        }
+
+        public void CreateLinkQueryDate(IntPtr[] linkColumnIndexes, IntPtr columnIndex, PredicateOperator predicateOperator, DateTimeOffset value)
+        {
+            NativeException nativeException;
+            NativeMethods.link_add_long_comparison(this, linkColumnIndexes, new IntPtr(linkColumnIndexes.Length), columnIndex, new IntPtr((int)predicateOperator), value.ToUniversalTime().Ticks, out nativeException);
+            nativeException.ThrowIfNecessary();
+        }
+
+        public void CreateLinkQueryBool(IntPtr[] linkColumnIndexes, IntPtr columnIndex, PredicateOperator predicateOperator, bool value)
+        {
+            NativeException nativeException;
+            NativeMethods.link_add_bool_comparison(this, linkColumnIndexes, new IntPtr(linkColumnIndexes.Length), columnIndex, new IntPtr((int)predicateOperator), new IntPtr(value ? 0 : 1), out nativeException);
+            nativeException.ThrowIfNecessary();
         }
 
         public void Not()

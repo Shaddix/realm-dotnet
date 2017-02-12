@@ -22,7 +22,9 @@
     <Compile Include="$(MSBuildThisFileDirectory)Handles\TableHandle.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Linq\ExpressionVisitor.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Linq\IRealmCollection.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Linq\PredicateOperator.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Linq\RealmCollectionNativeHelper.cs" />
+    <Compile Include="$(MSBuildThisFileDirectory)Linq\RealmResultsExtensions.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Linq\TypeSystem.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)MarshalHelpers.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)Native\SortDescriptorBuilder.cs" />

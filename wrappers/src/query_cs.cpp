@@ -407,6 +407,301 @@ REALM_EXPORT void query_null_not_equal(Query* query_ptr, size_t columnIndex, Nat
     });   
 }   
 
+typedef enum
+{
+	None,
+	Equal,
+	NotEqual,
+	LessThan,
+	LessThanOrEqual,
+	GreaterThan,
+	GreaterThanOrEqual,
+	BeginsWith,
+	EndsWith,
+	Contains
+} PredicateOperator;
+
+
+Table* link_table(Query* query_ptr, size_t link_column_indexes[], size_t link_column_indexes_length) {
+	TableRef table = query_ptr->get_table();
+	Table* t = table.get();
+	for (int i = 0; i < link_column_indexes_length; ++i) {
+		t->link(link_column_indexes[i]);
+	}
+	return t;
+}
+
+REALM_EXPORT void query_set_table_link(Query* query_ptr, size_t link_column_indexes[], size_t link_column_indexes_length, NativeException::Marshallable& ex)
+{
+	return handle_errors(ex, [&]() {
+		link_table(query_ptr, link_column_indexes, link_column_indexes_length);
+	});
+}
+
+REALM_EXPORT void query_link_add_string_comparison(Query * query_ptr, size_t* link_column_indexes, size_t link_column_indexes_length, size_t columnIndex, PredicateOperator predicateOperator, uint16_t* value, size_t value_len, bool case_sensitive, NativeException::Marshallable& ex)
+{
+	return handle_errors(ex, [&]() {
+		//Table* table = link_table(query_ptr, link_column_indexes, link_column_indexes_length);
+		TableRef table = query_ptr->get_table();
+		Table* t = table.get();
+		for (int i = 0; i < link_column_indexes_length; ++i) {
+			t->link(link_column_indexes[i]);
+		}
+
+
+		Utf16StringAccessor str(value, value_len);
+
+		auto column = table->column<String>(columnIndex);
+		Query linkquery;
+		if (predicateOperator == PredicateOperator::Equal) 
+		{
+			linkquery = column.equal(str, case_sensitive);
+		}
+		else if (predicateOperator == PredicateOperator::BeginsWith) 
+		{
+			linkquery = column.begins_with(str, case_sensitive);
+		}
+		else if (predicateOperator == PredicateOperator::NotEqual)
+		{
+			linkquery = column.not_equal(str, case_sensitive);
+		}
+		else if (predicateOperator == PredicateOperator::Contains)
+		{
+			linkquery = column.contains(str, case_sensitive);
+		}
+		else 
+		{
+			throw std::exception();
+		}
+		query_ptr->and_query(linkquery);
+
+		return;
+	});
+}
+
+REALM_EXPORT void query_link_add_int_comparison(Query * query_ptr, size_t* link_column_indexes, size_t link_column_indexes_length, size_t columnIndex, PredicateOperator predicateOperator, size_t value, NativeException::Marshallable& ex)
+{
+	return handle_errors(ex, [&]() {
+		Table* table = link_table(query_ptr, link_column_indexes, link_column_indexes_length);
+
+		auto column = table->column<Int>(columnIndex);
+		Query linkquery;
+		auto castedValue = static_cast<Int>(value);
+		if (predicateOperator == PredicateOperator::Equal)
+		{
+			linkquery = column == castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::GreaterThan)
+		{
+			linkquery = column > castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::GreaterThanOrEqual)
+		{
+			linkquery = column >= castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::GreaterThanOrEqual)
+		{
+			linkquery = column >= castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::LessThanOrEqual)
+		{
+			linkquery = column <= castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::LessThan)
+		{
+			linkquery = column < castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::NotEqual)
+		{
+			linkquery = column != castedValue;
+		}
+		else
+		{
+			throw std::exception();
+		}
+
+		query_ptr->and_query(linkquery);
+
+		return;
+	});
+}
+
+REALM_EXPORT void query_link_add_long_comparison(Query * query_ptr, size_t* link_column_indexes, size_t link_column_indexes_length, size_t columnIndex, PredicateOperator predicateOperator, int64_t value, NativeException::Marshallable& ex)
+{
+	return handle_errors(ex, [&]() {
+		Table* table = link_table(query_ptr, link_column_indexes, link_column_indexes_length);
+
+		auto column = table->column<int64_t>(columnIndex);
+		Query linkquery;
+		auto castedValue = static_cast<int64_t>(value);
+		if (predicateOperator == PredicateOperator::Equal)
+		{
+			linkquery = column == castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::GreaterThan)
+		{
+			linkquery = column > castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::GreaterThanOrEqual)
+		{
+			linkquery = column >= castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::GreaterThanOrEqual)
+		{
+			linkquery = column >= castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::LessThanOrEqual)
+		{
+			linkquery = column <= castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::LessThan)
+		{
+			linkquery = column < castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::NotEqual)
+		{
+			linkquery = column != castedValue;
+		}
+		else
+		{
+			throw std::exception();
+		}
+
+		query_ptr->and_query(linkquery);
+
+		return;
+	});
+}
+
+REALM_EXPORT void query_link_add_double_comparison(Query * query_ptr, size_t* link_column_indexes, size_t link_column_indexes_length, size_t columnIndex, PredicateOperator predicateOperator, double value, NativeException::Marshallable& ex)
+{
+	return handle_errors(ex, [&]() {
+		Table* table = link_table(query_ptr, link_column_indexes, link_column_indexes_length);
+
+		auto column = table->column<double>(columnIndex);
+		Query linkquery;
+		auto castedValue = static_cast<double>(value);
+		if (predicateOperator == PredicateOperator::Equal)
+		{
+			linkquery = column == castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::GreaterThan)
+		{
+			linkquery = column > castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::GreaterThanOrEqual)
+		{
+			linkquery = column >= castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::GreaterThanOrEqual)
+		{
+			linkquery = column >= castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::LessThanOrEqual)
+		{
+			linkquery = column <= castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::LessThan)
+		{
+			linkquery = column < castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::NotEqual)
+		{
+			linkquery = column != castedValue;
+		}
+		else
+		{
+			throw std::exception();
+		}
+
+		query_ptr->and_query(linkquery);
+
+		return;
+	});
+}
+
+REALM_EXPORT void query_link_add_float_comparison(Query * query_ptr, size_t* link_column_indexes, size_t link_column_indexes_length, size_t columnIndex, PredicateOperator predicateOperator, float value, NativeException::Marshallable& ex)
+{
+	return handle_errors(ex, [&]() {
+		Table* table = link_table(query_ptr, link_column_indexes, link_column_indexes_length);
+
+		auto column = table->column<float>(columnIndex);
+		Query linkquery;
+		auto castedValue = static_cast<float>(value);
+		if (predicateOperator == PredicateOperator::Equal)
+		{
+			linkquery = column == castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::GreaterThan)
+		{
+			linkquery = column > castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::GreaterThanOrEqual)
+		{
+			linkquery = column >= castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::GreaterThanOrEqual)
+		{
+			linkquery = column >= castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::LessThanOrEqual)
+		{
+			linkquery = column <= castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::LessThan)
+		{
+			linkquery = column < castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::NotEqual)
+		{
+			linkquery = column != castedValue;
+		}
+		else
+		{
+			throw std::exception();
+		}
+
+		query_ptr->and_query(linkquery);
+
+		return;
+	});
+}
+
+
+REALM_EXPORT void query_link_add_bool_comparison(Query * query_ptr, size_t* link_column_indexes, size_t link_column_indexes_length, size_t columnIndex, PredicateOperator predicateOperator, size_t value, NativeException::Marshallable& ex)
+{
+	return handle_errors(ex, [&]() {
+		Table* table = link_table(query_ptr, link_column_indexes, link_column_indexes_length);
+
+		auto column = table->column<bool>(columnIndex);
+		Query linkquery;
+		auto castedValue = size_t_to_bool(value);
+		if (predicateOperator == PredicateOperator::Equal)
+		{
+			linkquery = column == castedValue;
+		}
+		else if (predicateOperator == PredicateOperator::NotEqual)
+		{
+			linkquery = column != castedValue;
+		}
+		else
+		{
+			throw std::exception();
+		}
+
+		query_ptr->and_query(linkquery);
+
+		return;
+	});
+}
+
+REALM_EXPORT void query_and(Query * query_ptr, const Query & linkquery, NativeException::Marshallable& ex)
+{
+	handle_errors(ex, [&]() {
+		query_ptr->and_query(linkquery);
+	});
+}
+
 REALM_EXPORT Results* query_create_results(Query* query_ptr, SharedRealm* realm, NativeException::Marshallable& ex)
 {
     return handle_errors(ex, [&]() {
