@@ -1,4 +1,4 @@
-﻿////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 //
 // Copyright 2016 Realm Inc.
 //
@@ -179,8 +179,8 @@ namespace Realms
             public static extern IntPtr get_column_index(QueryHandle queryPtr,
                         [MarshalAs(UnmanagedType.LPWStr)] string columnName, IntPtr columnNameLen, out NativeException ex);
 
-            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_get_table_link", CallingConvention = CallingConvention.Cdecl)]
-            public static extern IntPtr get_table_link(QueryHandle queryPtr, IntPtr columnNameLen, out NativeException ex);
+            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_set_table_link", CallingConvention = CallingConvention.Cdecl)]
+            public static extern IntPtr set_table_link(QueryHandle queryPtr, IntPtr columnNameLen, out NativeException ex);
 
             [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_and", CallingConvention = CallingConvention.Cdecl)]
             public static extern void query_and(QueryHandle queryPtr, QueryHandle linkQueryPtr, out NativeException ex);
@@ -200,9 +200,6 @@ namespace Realms
 
             [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_link_add_double_comparison", CallingConvention = CallingConvention.Cdecl)]
             public static extern void link_add_double_comparison(QueryHandle queryPtr, IntPtr[] linkColumnIndexes, IntPtr linkColumnIndexesLength, IntPtr columnIndex, IntPtr predicateOperator, Double value, out NativeException ex);
-
-            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_link_add_date_comparison", CallingConvention = CallingConvention.Cdecl)]
-            public static extern void link_add_date_comparison(QueryHandle queryPtr, IntPtr[] linkColumnIndexes, IntPtr linkColumnIndexesLength, IntPtr columnIndex, IntPtr predicateOperator, Int64 value, out NativeException ex);
 
             [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_link_add_long_comparison", CallingConvention = CallingConvention.Cdecl)]
             public static extern void link_add_long_comparison(QueryHandle queryPtr, IntPtr[] linkColumnIndexes, IntPtr linkColumnIndexesLength, IntPtr columnIndex, IntPtr predicateOperator, Int64 value, out NativeException ex);
@@ -577,11 +574,11 @@ namespace Realms
             return result;
         }
 
-        public IntPtr GetLinkTable(string columnName)
+        public IntPtr SetLinkTable(string columnName)
         {
             NativeException nativeException;
             var columnIndex = this.GetColumnIndex(columnName);
-            var result = NativeMethods.get_table_link(this, columnIndex, out nativeException);
+            var result = NativeMethods.set_table_link(this, columnIndex, out nativeException);
             nativeException.ThrowIfNecessary();
             return result;
         }
