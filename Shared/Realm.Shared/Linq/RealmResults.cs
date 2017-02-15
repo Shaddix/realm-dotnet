@@ -72,22 +72,33 @@ namespace Realms
                 return _handle;
             }
 
+            var expression = Expression;
             if (_allRecords)
             {
-                return Realm.MakeResultsForTable(TargetMetadata);
+                if (_linkedQueries?.Count > 0)
+                {
+                    var results = new RealmResults<T>(this.Realm, TargetMetadata, true);
+                    var query = results.CreateQuery();
+                    AddLinkQueries(query);
+                    return Realm.MakeResultsForQuery(query, null);
+                }
+                else
+                {
+                    return Realm.MakeResultsForTable(TargetMetadata);
+                }
             }
 
             // do all the LINQ expression evaluation to build a query
             var qv = _provider.MakeVisitor();
-            qv.Visit(Expression);
+            qv.Visit(expression);
             var queryHandle = qv.CoreQueryHandle; // grab out the built query definition
-            AddLinkQueries(qv);
+            AddLinkQueries(queryHandle);
 
             var sortHandle = qv.OptionalSortDescriptorBuilder;
             return Realm.MakeResultsForQuery(queryHandle, sortHandle);
         }
 
-        private void AddLinkQueries(RealmResultsVisitor qv)
+        private void AddLinkQueries(QueryHandle query)
         {
             if (_linkedQueries != null)
             {
@@ -116,27 +127,27 @@ namespace Realms
                     var lastPropertyId = propertyIndexes.Pop();
                     if (property.Type == Realms.Schema.PropertyType.String)
                     {
-                        qv.CoreQueryHandle.CreateLinkQueryString(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (string)linkedQueryInfo.Value, false);
+                        query.CreateLinkQueryString(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (string)linkedQueryInfo.Value, false);
                     }
                     else if (property.Type == Realms.Schema.PropertyType.Int)
                     {
-                        qv.CoreQueryHandle.CreateLinkQueryInt(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (int)linkedQueryInfo.Value);
+                        query.CreateLinkQueryInt(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (int)linkedQueryInfo.Value);
                     }
                     else if (property.Type == Realms.Schema.PropertyType.Bool)
                     {
-                        qv.CoreQueryHandle.CreateLinkQueryBool(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (bool)linkedQueryInfo.Value);
+                        query.CreateLinkQueryBool(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (bool)linkedQueryInfo.Value);
                     }
                     else if (property.Type == Realms.Schema.PropertyType.Float)
                     {
-                        qv.CoreQueryHandle.CreateLinkQueryFloat(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (float)linkedQueryInfo.Value);
+                        query.CreateLinkQueryFloat(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (float)linkedQueryInfo.Value);
                     }
                     else if (property.Type == Realms.Schema.PropertyType.Double)
                     {
-                        qv.CoreQueryHandle.CreateLinkQueryDouble(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (double)linkedQueryInfo.Value);
+                        query.CreateLinkQueryDouble(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (double)linkedQueryInfo.Value);
                     }
                     else if (property.Type == Realms.Schema.PropertyType.Date)
                     {
-                        qv.CoreQueryHandle.CreateLinkQueryDate(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (DateTimeOffset)linkedQueryInfo.Value);
+                        query.CreateLinkQueryDate(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (DateTimeOffset)linkedQueryInfo.Value);
                     }
                     else
                     {
