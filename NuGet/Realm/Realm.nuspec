@@ -11,24 +11,30 @@
     <projectUrl>http://github.com/realm/realm-dotnet</projectUrl>
     <iconUrl>http://realm.io/img/favicon-32x32.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
-    <description>Realm is a mobile database: a replacement for SQLite and ORMs</description>
+    <description>Realm is a mobile database: a replacement for SQLite and ORMs. This package includes classes that allow you to synchronize realm files using the Realm Mobile Platform.</description>
     <summary />
     <language>en-US</language>
     <tags>Realm database db persistence sqlite</tags>
     <dependencies>
-      <dependency id="Realm.Database" version="$version$"/>
+      <group targetFramework="portable-net45+sl5+wp8+wpa81+win8+monoandroid+Xamarin.iOS10+monotouch+Xamarin.Mac">
+        <dependency id="Realm.Database" version="$version$"/>
+      </group>
+      <group targetFramework="netstandard1.4">
+        <dependency id="Realm.Database" version="$version$"/>
+        <dependency id="Newtonsoft.Json" version="9.0.1"/>
+      </group>
     </dependencies>
   </metadata>
   <files>
 <!-- PCL file -->
     <file src="../../Platform.PCL/Realm.Sync.PCL/bin/$Configuration$/Realm.Sync.*" target="lib/portable-net45+sl5+wp8+wpa81+win8+monoandroid+Xamarin.iOS10+monotouch+Xamarin.Mac" />
+<!-- NETStandard file -->
+    <file src="../../Realm/Realm.Sync/bin/$Configuration$/Realm.Sync.*" target="lib/netstandard1.4" />
 <!-- IOS file -->
-    <file src="../../Platform.XamarinIOS/Realm.Sync.XamarinIOS/bin/iPhoneSimulator/$Configuration$/Realm.Sync.*" target="lib/Xamarin.iOS10" />
     <file src="../../wrappers/build/$Configuration$-ios-universal/librealm-wrappers.a" target="native/ios/universal" />
 <!-- Targets file adds adds references to native libs -->
     <file src="Realm.targets" target="build" />
 <!-- Android files -->
-    <file src="../../Platform.XamarinAndroid/Realm.Sync.XamarinAndroid/bin/$Configuration$/Realm.Sync.*" target="lib/MonoAndroid44" />
     <file src="../../wrappers/build/$Configuration$-android/armeabi-v7a/librealm-wrappers.so" target="native/android/armeabi-v7a" />
     <file src="../../wrappers/build/$Configuration$-android/arm64-v8a/librealm-wrappers.so" target="native/android/arm64-v8a" />
     <file src="../../wrappers/build/$Configuration$-android/x86/librealm-wrappers.so" target="native/android/x86" />

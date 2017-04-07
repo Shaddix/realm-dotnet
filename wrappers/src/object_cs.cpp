@@ -23,15 +23,17 @@
 #include "object_accessor.hpp"
 #include "timestamp_helpers.hpp"
 #include "object_cs.hpp"
+#include "object-store/src/thread_safe_reference.hpp"
+#include "notifications_cs.hpp"
 
 using namespace realm;
 using namespace realm::binding;
 
 extern "C" {
-    REALM_EXPORT size_t object_get_is_valid(const Object& object, NativeException::Marshallable& ex)
+    REALM_EXPORT bool object_get_is_valid(const Object& object, NativeException::Marshallable& ex)
     {
         return handle_errors(ex, [&]() {
-            return bool_to_size_t(object.is_valid());
+            return object.is_valid();
         });
     }
     
@@ -263,8 +265,6 @@ extern "C" {
             
             const size_t column_ndx = get_column_index(object, property_ndx);
             object.row().set_link(column_ndx, target_object.row().get_index());
-            
-            notify_changes(object, property_ndx);
         });
     }
     
@@ -275,8 +275,6 @@ extern "C" {
             
             const size_t column_ndx = get_column_index(object, property_ndx);
             object.row().nullify_link(column_ndx);
-            
-            notify_changes(object, property_ndx);
         });
     }
     
@@ -290,8 +288,6 @@ extern "C" {
                 throw std::invalid_argument("Column is not nullable");
             
             object.row().set_null(column_ndx);
-            
-            notify_changes(object, property_ndx);
         });
     }
     
@@ -315,8 +311,6 @@ extern "C" {
             }
             
             object.row().set_null_unique(column_ndx);
-            
-            notify_changes(object, property_ndx);
         });
     }
     
@@ -326,8 +320,6 @@ extern "C" {
             verify_can_set(object);
             const size_t column_ndx = get_column_index(object, property_ndx);
             object.row().set_bool(column_ndx, size_t_to_bool(value));
-            
-            notify_changes(object, property_ndx);
         });
     }
     
@@ -338,8 +330,6 @@ extern "C" {
             
             const size_t column_ndx = get_column_index(object, property_ndx);
             object.row().set_int(column_ndx, value);
-            
-            notify_changes(object, property_ndx);
         });
     }
     
@@ -361,8 +351,6 @@ extern "C" {
             }
             
             object.row().set_int_unique(column_ndx, value);
-            
-            notify_changes(object, property_ndx);
         });
     }
     
@@ -373,8 +361,6 @@ extern "C" {
             
             const size_t column_ndx = get_column_index(object, property_ndx);
             object.row().set_float(column_ndx, value);
-            
-            notify_changes(object, property_ndx);
         });
     }
     
@@ -384,8 +370,6 @@ extern "C" {
             verify_can_set(object);
             const size_t column_ndx = get_column_index(object, property_ndx);
             object.row().set_double(column_ndx, value);
-            
-            notify_changes(object, property_ndx);
         });
     }
     
@@ -397,8 +381,6 @@ extern "C" {
             const size_t column_ndx = get_column_index(object, property_ndx);
             Utf16StringAccessor str(value, value_len);
             object.row().set_string(column_ndx, str);
-            
-            notify_changes(object, property_ndx);
         });
     }
     
@@ -421,8 +403,6 @@ extern "C" {
             }
             
             object.row().set_string_unique(column_ndx, str);
-            
-            notify_changes(object, property_ndx);
         });
     }
     
@@ -433,8 +413,6 @@ extern "C" {
             
             const size_t column_ndx = get_column_index(object, property_ndx);
             object.row().set_binary(column_ndx, BinaryData(value, value_len));
-            
-            notify_changes(object, property_ndx);
         });
     }
     
@@ -445,8 +423,6 @@ extern "C" {
             
             const size_t column_ndx = get_column_index(object, property_ndx);
             object.row().set_timestamp(column_ndx, from_ticks(value));
-            
-            notify_changes(object, property_ndx);
         });
     }
     
@@ -460,13 +436,7 @@ extern "C" {
             verify_can_set(object);
             
             auto const row_index = object.row().get_index();
-            auto const table_index = object.row().get_table()->get_index_in_group();
             object.row().get_table()->move_last_over(row_index);
-            
-            if (realm->m_binding_context != nullptr) {
-                auto const& csharp_context = static_cast<binding::CSharpBindingContext*>(object.realm()->m_binding_context.get());
-                csharp_context->notify_removed(row_index, table_index);
-            }
         });
     }
     
@@ -474,6 +444,31 @@ extern "C" {
     {
         return handle_errors(ex, [&]() {
             return object.row().get_index() == other_object.row().get_index();
+        });
+    }
+    
+    REALM_EXPORT ThreadSafeReference<Object>* object_get_thread_safe_reference(const Object& object, NativeException::Marshallable& ex)
+    {
+        return handle_errors(ex, [&]() {
+            return new ThreadSafeReference<Object>{object.realm()->obtain_thread_safe_reference(object)};
+        });
+    }
+    
+    REALM_EXPORT void* object_destroy_notificationtoken(ManagedNotificationTokenContext* token_ptr, NativeException::Marshallable& ex)
+    {
+        return handle_errors(ex, [&]() {
+            void* managed_collection = token_ptr->managed_object;
+            delete token_ptr;
+            return managed_collection;
+        });
+    }
+    
+    REALM_EXPORT ManagedNotificationTokenContext* object_add_notification_callback(Object* object, void* managed_object, ManagedNotificationCallback callback, NativeException::Marshallable& ex)
+    {
+        return handle_errors(ex, [=]() {
+            return subscribe_for_notifications(managed_object, callback, [object](CollectionChangeCallback callback) {
+                return object->add_notification_block(callback);
+            }, new ObjectSchema(object->get_object_schema()));
         });
     }
     

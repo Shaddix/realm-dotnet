@@ -19,10 +19,11 @@
 #include <realm.hpp>
 #include "error_handling.hpp"
 #include "marshalling.hpp"
-#include "collection_cs.hpp"
 #include "realm_export_decls.hpp"
 #include "results.hpp"
 #include "object_accessor.hpp"
+#include "object-store/src/thread_safe_reference.hpp"
+#include "notifications_cs.hpp"
 
 using namespace realm;
 using namespace realm::binding;
@@ -89,19 +90,24 @@ REALM_EXPORT ManagedNotificationTokenContext* results_add_notification_callback(
     });
 }
 
-REALM_EXPORT void* collection_destroy_notificationtoken(ManagedNotificationTokenContext* token_ptr, NativeException::Marshallable& ex)
-{
-    return handle_errors(ex, [&]() {
-        void* managed_collection = token_ptr->managed_collection;
-        delete token_ptr;
-        return managed_collection;
-    });
-}
-    
 REALM_EXPORT Query* results_get_query(Results* results_ptr, NativeException::Marshallable& ex)
 {
     return handle_errors(ex, [&]() {
         return new Query(results_ptr->get_query());
+    });
+}
+    
+REALM_EXPORT bool results_get_is_valid(const Results& results, NativeException::Marshallable& ex)
+{
+    return handle_errors(ex, [&]() {
+        return results.is_valid();
+    });
+}
+
+REALM_EXPORT ThreadSafeReference<Results>* results_get_thread_safe_reference(const Results& results, NativeException::Marshallable& ex)
+{
+    return handle_errors(ex, [&]() {
+        return new ThreadSafeReference<Results>{results.get_realm()->obtain_thread_safe_reference(results)};
     });
 }
 
