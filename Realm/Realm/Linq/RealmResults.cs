@@ -104,8 +104,8 @@ namespace Realms
                 foreach (var linkedQueryInfo in _linkedQueries)
                 {
                     var propertyPath = linkedQueryInfo.PropertyPath.Split('.');
-                    var metadata = TargetMetadata;
-                    Stack<IntPtr> propertyIndexes = new Stack<IntPtr>();
+                    var metadata = Metadata;
+                    System.Collections.Generic.Stack<IntPtr> propertyIndexes = new System.Collections.Generic.Stack<IntPtr>();
                     var i = 0;
                     Realms.Schema.Property property = new Realms.Schema.Property();
                     foreach (var propertyName in propertyPath)
@@ -165,11 +165,11 @@ namespace Realms
             public object Value { get; set; }
         }
 
-        private List<LinkQuery> _linkedQueries;
+        private System.Collections.Generic.List<LinkQuery> _linkedQueries;
 
         public void AddLinkQueryInternal<TLink>(Expression<Func<T, TLink>> property, PredicateOperator predicateOperator, TLink value)
         {
-            _linkedQueries = _linkedQueries ?? new List<LinkQuery>();
+            _linkedQueries = _linkedQueries ?? new System.Collections.Generic.List<LinkQuery>();
             var name = property.Parameters[0].Name;
             _linkedQueries.Add(new LinkQuery()
             {
@@ -181,7 +181,7 @@ namespace Realms
 
         public void AddLinkQueryInternal(string propertyPath, PredicateOperator predicateOperator, object value)
         {
-            _linkedQueries = _linkedQueries ?? new List<LinkQuery>();
+            _linkedQueries = _linkedQueries ?? new System.Collections.Generic.List<LinkQuery>();
             _linkedQueries.Add(new LinkQuery()
             {
                 PropertyPath = propertyPath,
