@@ -17,8 +17,10 @@
 ////////////////////////////////////////////////////////////////////////////
 
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Realms.Exceptions;
 using Realms.Schema;
@@ -293,13 +295,15 @@ namespace Realms
         }
 
         /// <summary>
-        /// Execute an action inside a temporary <see cref="Transaction"/> on a worker thread. If no exception is thrown,
+        /// Execute an action inside a temporary <see cref="Transaction"/> on a worker thread, <b>if</b> called from UI thread. If no exception is thrown,
         /// the <see cref="Transaction"/> will be committed.
         /// </summary>
         /// <remarks>
         /// Opens a new instance of this Realm on a worker thread and executes <c>action</c> inside a write <see cref="Transaction"/>.
         /// <see cref="Realm"/>s and <see cref="RealmObject"/>s are thread-affine, so capturing any such objects in 
-        /// the <c>action</c> delegate will lead to errors if they're used on the worker thread.
+        /// the <c>action</c> delegate will lead to errors if they're used on the worker thread. Note that it checks the
+        /// <see cref="SynchronizationContext"/> to determine if <c>Current</c> is null, as a test to see if you are on the UI thread
+        /// and will otherwise just call Write without starting a new thread. So if you know you are invoking from a worker thread, just call Write instead.
         /// </remarks>
         /// <example>
         /// <code>
@@ -503,6 +507,55 @@ namespace Realms
             RealmPCLHelpers.ThrowProxyShouldNeverBeUsed();
         }
 
+        #region Thread Handover
+
+        /// <summary>
+        /// Returns the same object as the one referenced when the <see cref="ThreadSafeReference.Object{T}"/> was first created,
+        /// but resolved for the current Realm for this thread.
+        /// </summary>
+        /// <param name="reference">The thread-safe reference to the thread-confined <see cref="RealmObject"/> to resolve in this <see cref="Realm"/>.</param>
+        /// <typeparam name="T">The type of the object, contained in the reference.</typeparam>
+        /// <returns>
+        /// A thread-confined instance of the original <see cref="RealmObject"/> resolved for the current thread or <c>null</c>
+        /// if the object has been deleted after the reference was created.
+        /// </returns>
+        public T ResolveReference<T>(ThreadSafeReference.Object<T> reference) where T : RealmObject
+        {
+            RealmPCLHelpers.ThrowProxyShouldNeverBeUsed();
+            return null;
+        }
+
+        /// <summary>
+        /// Returns the same collection as the one referenced when the <see cref="ThreadSafeReference.List{T}"/> was first created,
+        /// but resolved for the current Realm for this thread.
+        /// </summary>
+        /// <param name="reference">The thread-safe reference to the thread-confined <see cref="IList{T}"/> to resolve in this <see cref="Realm"/>.</param>
+        /// <typeparam name="T">The type of the object, contained in the collection.</typeparam>
+        /// <returns>
+        /// A thread-confined instance of the original <see cref="IList{T}"/> resolved for the current thread or <c>null</c>
+        /// if the list's parent object has been deleted after the reference was created.
+        /// </returns>
+        public IList<T> ResolveReference<T>(ThreadSafeReference.List<T> reference) where T : RealmObject
+        {
+            RealmPCLHelpers.ThrowProxyShouldNeverBeUsed();
+            return null;
+        }
+
+        /// <summary>
+        /// Returns the same query as the one referenced when the <see cref="ThreadSafeReference.Query{T}"/> was first created,
+        /// but resolved for the current Realm for this thread.
+        /// </summary>
+        /// <param name="reference">The thread-safe reference to the thread-confined <see cref="IQueryable{T}"/> to resolve in this <see cref="Realm"/>.</param>
+        /// <typeparam name="T">The type of the object, contained in the query.</typeparam>
+        /// <returns>A thread-confined instance of the original <see cref="IQueryable{T}"/> resolved for the current thread.</returns>
+        public IQueryable<T> ResolveReference<T>(ThreadSafeReference.Query<T> reference) where T : RealmObject
+        {
+            RealmPCLHelpers.ThrowProxyShouldNeverBeUsed();
+            return null;
+        }
+
+        #endregion
+
         #region Obsolete methods
 
         /// <summary>
@@ -564,7 +617,7 @@ namespace Realms
         /// <param name="obj">Must be a standalone object, null not allowed.</param>
         /// <param name="update">If true, and an object with the same primary key already exists, performs an update.</param>
         /// <exception cref="RealmInvalidTransactionException">If you invoke this when there is no write Transaction active on the realm.</exception>
-        /// <exception cref="RealmObjectManagedByAnotherRealmException">You can't manage an object with more than one realm</exception>
+        /// <exception cref="RealmObjectManagedByAnotherRealmException">You can't manage an object with more than one realm.</exception>
         [Obsolete("This method has been renamed. Use Add for the same results.")]
         public void Manage<T>(T obj, bool update) where T : RealmObject
         {

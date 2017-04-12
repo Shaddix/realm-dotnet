@@ -4,12 +4,16 @@ wrapperConfigurations = [
 ]
 configuration = 'Release'
 
-def nuget = '/usr/local/bin/nuget'
-def xbuild = '/usr/local/bin/xbuild'
+xbuildCmd = '/usr/local/bin/xbuild'
+nugetCmd = '/usr/local/bin/nuget'
+def windowsNugetCmd = 'C:\\ProgramData\\chocolatey\\bin\\NuGet.exe'
 def mono = '/usr/local/bin/mono'
 
 def version
 def versionString
+
+def dataBindingVersion
+def dataBindingVersionString
 
 stage('Checkout') {
   node('xamarin-mac') {
@@ -24,10 +28,13 @@ stage('Checkout') {
         userRemoteConfigs: scm.userRemoteConfigs
       ])
 
-      version = readAssemblyVersion()
+      version = readAssemblyVersion('RealmAssemblyInfo.cs')
       versionString = "${version.major}.${version.minor}.${version.patch}"
 
-      sh "${nuget} restore Realm.sln"
+      dataBindingVersion = readAssemblyVersion('DataBinding/DataBindingAssemblyInfo.cs');
+      dataBindingVersionString = "${version.major}.${version.minor}.${version.patch}"
+
+      nuget('restore Realm.sln')
 
       stash includes: '**', name: 'dotnet-source'
       deleteDir()
@@ -38,18 +45,34 @@ def getArchive() {
     unstash 'dotnet-source'
 }
 
-stage('RealmWeaver') {
-  nodeWithCleanup('xamarin-mac') {
-    getArchive()
-    def workspace = pwd()
+stage('Weavers') {
+  parallel(
+    'RealmWeaver': {
+      nodeWithCleanup('xamarin-mac') {
+        getArchive()
+        def workspace = pwd()
 
-    dir('Weaver/WeaverTests/RealmWeaver.Tests') {
-      xbuildSafe("${xbuild} RealmWeaver.Tests.csproj /p:Configuration=${configuration}")
-      sh "${mono} \"${workspace}\"/packages/NUnit.ConsoleRunner.*/tools/nunit3-console.exe RealmWeaver.Tests.csproj --result=TestResult.xml\\;format=nunit2 --config=${configuration} --inprocess"
-      publishTests 'TestResult.xml'
+        dir('Weaver/WeaverTests/RealmWeaver.Tests') {
+          xbuild("RealmWeaver.Tests.csproj /p:Configuration=${configuration} /p:SolutionDir=\"${workspace}/\"")
+          sh "${mono} \"${workspace}\"/packages/NUnit.ConsoleRunner.*/tools/nunit3-console.exe RealmWeaver.Tests.csproj --result=TestResult.xml\\;format=nunit2 --config=${configuration} --inprocess"
+          publishTests 'TestResult.xml'
+        }
+        stash includes: "Weaver/RealmWeaver.Fody/bin/${configuration}/RealmWeaver.Fody.dll", name: 'nuget-weaver'
+        stash includes: "Tools/RealmWeaver.Fody.dll", name: 'tools-weaver'
+      }
+    },
+    'BuildTasks': {
+      nodeWithCleanup('xamarin-mac') {
+        getArchive()
+        def workspace = pwd()
+
+        dir('Weaver/Realm.BuildTasks') {
+          xbuild("Realm.BuildTasks.csproj /p:Configuration=${configuration}")
+        }
+        stash includes: "Weaver/Realm.BuildTasks/bin/${configuration}/*.dll", name: 'buildtasks-output'
+      }
     }
-    stash includes: "Weaver/RealmWeaver.Fody/bin/${configuration}/RealmWeaver.Fody.dll", name: 'nuget-weaver'
-  }
+  )
 }
 
 stage('Build without sync') {
@@ -68,12 +91,15 @@ stage('Build without sync') {
         getArchive()
         def workspace = pwd()
         unstash 'ios-wrappers-nosync'
+        unstash 'buildtasks-output'
+        unstash 'tools-weaver'
 
-        xbuildSafe("${xbuild} Platform.XamarinIOS/Tests.XamarinIOS/Tests.XamarinIOS.csproj /p:RealmNoSync=true /p:Configuration=${configuration} /p:Platform=iPhoneSimulator /p:SolutionDir=\"${workspace}/\"")
+        xbuild("Tests/Tests.XamarinIOS/Tests.XamarinIOS.csproj /p:RealmNoSync=true /p:Configuration=${configuration} /p:Platform=iPhoneSimulator /p:SolutionDir=\"${workspace}/\"")
 
-        stash includes: "Platform.XamarinIOS/Realm.XamarinIOS/bin/iPhoneSimulator/${configuration}/Realm.*", name: 'nuget-ios-database'
+        stash includes: "Realm/Realm/bin/${configuration}/Realm.*", name: 'nuget-database'
+        stash includes: "DataBinding/Realm.DataBinding.iOS/bin/${configuration}/Realm.DataBinding.*", name: 'nuget-ios-databinding'
 
-        dir("Platform.XamarinIOS/Tests.XamarinIOS/bin/iPhoneSimulator/${configuration}") {
+        dir("Tests/Tests.XamarinIOS/bin/iPhoneSimulator/${configuration}") {
           stash includes: 'Tests.XamarinIOS.app/**/*', name: 'ios-tests-nosync'
         }
       }
@@ -95,39 +121,69 @@ stage('Build without sync') {
         def workspace = pwd()
 
         unstash 'android-wrappers-nosync'
+        unstash 'tools-weaver'
 
-        dir('Platform.XamarinAndroid/Tests.XamarinAndroid') {
-          xbuildSafe("${xbuild} Tests.XamarinAndroid.csproj /p:RealmNoSync=true /p:Configuration=${configuration} /t:SignAndroidPackage /p:AndroidUseSharedRuntime=false /p:EmbedAssembliesIntoApk=True /p:SolutionDir=\"${workspace}/\"")
-          dir("bin/${configuration}") {
-            stash includes: 'io.realm.xamarintests-Signed.apk', name: 'android-tests-nosync'
-          }
+        xbuild("Tests/Tests.XamarinAndroid/Tests.XamarinAndroid.csproj /p:RealmNoSync=true /p:Configuration=${configuration} /t:SignAndroidPackage /p:AndroidUseSharedRuntime=false /p:EmbedAssembliesIntoApk=True /p:SolutionDir=\"${workspace}/\"")
+
+        stash includes: "DataBinding/Realm.DataBinding.Android/bin/${configuration}/Realm.DataBinding.*", name: 'nuget-android-databinding'
+
+        dir("Tests/Tests.XamarinAndroid/bin/${configuration}") {
+          stash includes: 'io.realm.xamarintests-Signed.apk', name: 'android-tests-nosync'
         }
-        stash includes: "Platform.XamarinAndroid/Realm.XamarinAndroid/bin/${configuration}/Realm.*", name: 'nuget-android-database'
       }
     },
     'Win32': {
       nodeWithCleanup('windows') {
         getArchive()
 
+        unstash 'tools-weaver'
+
+        dir('wrappers') {
+          cmake 'build-win32', "${pwd()}\\build", configuration, [ 'CMAKE_GENERATOR_PLATFORM': 'Win32' ]
+          cmake 'build-x64', "${pwd()}\\build", configuration, [ 'CMAKE_GENERATOR_PLATFORM': 'x64' ]
+        }
+
         bat """
-          "${tool 'msbuild'}" Realm.sln /p:Configuration=${configuration} /p:Platform=x86 /t:"Platform_Win32\\wrappers"
-          "${tool 'msbuild'}" Realm.sln /p:Configuration=${configuration} /p:Platform=x64 /t:"Platform_Win32\\wrappers"
-          "${tool 'msbuild'}" Realm.sln /p:Configuration=${configuration} /t:"Platform_Win32\\Tests_Win32"
+          "${windowsNugetCmd}" restore Realm.sln
+          "${tool 'msbuild'}" Tests/Tests.Win32/Tests.Win32.csproj /p:Configuration=${configuration} /p:SolutionDir="${workspace}/"
         """
 
         stash includes: 'wrappers/build/**/*.dll', name: 'win32-wrappers-nosync'
-        stash includes: "Platform.Win32/Realm.Win32/bin/${configuration}/Realm.*", name: 'nuget-win32-database'
-        stash includes: "Platform.Win32/Tests.Win32/bin/${configuration}/**", name: 'win32-tests-nosync'
+        stash includes: "Tests/Tests.Win32/bin/${configuration}/**", name: 'win32-tests-nosync'
+      }
+    },
+    'UWP': {
+      nodeWithCleanup('windows') {
+        getArchive()
+
+        dir('wrappers') {
+          //cmake 'build-win32', "${pwd()}\\build", configuration, [ 'CMAKE_GENERATOR_PLATFORM': 'Win32', 'CMAKE_SYSTEM_NAME': 'WindowsStore', 'CMAKE_SYSTEM_VERSION': '10.0' ]
+          cmake 'build-x64', "${pwd()}\\build", configuration, [ 'CMAKE_GENERATOR_PLATFORM': 'x64', 'CMAKE_SYSTEM_NAME': 'WindowsStore', 'CMAKE_SYSTEM_VERSION': '10.0' ]
+          cmake 'build-arm', "${pwd()}\\build", configuration, [ 'CMAKE_GENERATOR_PLATFORM': 'ARM', 'CMAKE_SYSTEM_NAME': 'WindowsStore', 'CMAKE_SYSTEM_VERSION': '10.0' ]
+        }
+
+        archive 'build/**/*'
       }
     },
     'PCL': {
       nodeWithCleanup('xamarin-mac') {
         getArchive()
-        sh "${nuget} restore Realm.sln"
-        xbuildSafe("${xbuild} Platform.PCL/Realm.PCL/Realm.PCL.csproj /p:Configuration=${configuration}")
+
+        xbuild("Platform.PCL/Realm.PCL/Realm.PCL.csproj /p:Configuration=${configuration}")
+        xbuild("DataBinding/Realm.DataBinding.PCL/Realm.DataBinding.PCL.csproj /p:Configuration=${configuration}")
+
         stash includes: "Platform.PCL/Realm.PCL/bin/${configuration}/Realm.*", name: 'nuget-pcl-database'
+        stash includes: "DataBinding/Realm.DataBinding.PCL/bin/${configuration}/Realm.DataBinding.*", name: 'nuget-pcl-databinding'
       }
     }
+  )
+}
+
+stage('Test without sync') {
+  parallel(
+    'iOS': iOSTest('ios-tests-nosync'),
+    'Android': AndroidTest('android-tests-nosync'),
+    'Win32': Win32Test('win32-tests-nosync')
   )
 }
 
@@ -147,14 +203,14 @@ stage('Build with sync') {
         getArchive()
 
         unstash 'ios-wrappers-sync'
+        unstash 'buildtasks-output'
+        unstash 'tools-weaver'
 
-        sh "${nuget} restore Realm.sln"
+        xbuild("Tests/Tests.XamarinIOS/Tests.XamarinIOS.csproj /p:Configuration=${configuration} /p:Platform=iPhoneSimulator /p:SolutionDir=\"${workspace}/\"")
 
-        xbuildSafe("${xbuild} Platform.XamarinIOS/Tests.XamarinIOS/Tests.XamarinIOS.csproj /p:Configuration=${configuration} /p:Platform=iPhoneSimulator /p:SolutionDir=\"${workspace}/\"")
+        stash includes: "Realm/Realm.Sync/bin/${configuration}/Realm.Sync.*", name: 'nuget-sync'
 
-        stash includes: "Platform.XamarinIOS/Realm.Sync.XamarinIOS/bin/iPhoneSimulator/${configuration}/Realm.Sync.*", name: 'nuget-ios-sync'
-
-        dir("Platform.XamarinIOS/Tests.XamarinIOS/bin/iPhoneSimulator/${configuration}") {
+        dir("Tests/Tests.XamarinIOS/bin/iPhoneSimulator/${configuration}") {
           stash includes: 'Tests.XamarinIOS.app/**/*', name: 'ios-tests-sync'
         }
       }
@@ -176,35 +232,23 @@ stage('Build with sync') {
         def workspace = pwd()
 
         unstash 'android-wrappers-sync'
+        unstash 'tools-weaver'
 
-        sh "${nuget} restore Realm.sln"
-
-        dir('Platform.XamarinAndroid/Tests.XamarinAndroid') {
-          xbuildSafe("${xbuild} Tests.XamarinAndroid.csproj /p:Configuration=${configuration} /t:SignAndroidPackage /p:AndroidUseSharedRuntime=false /p:EmbedAssembliesIntoApk=True /p:SolutionDir=\"${workspace}/\"")
+        dir('Tests/Tests.XamarinAndroid') {
+          xbuild("Tests.XamarinAndroid.csproj /p:Configuration=${configuration} /t:SignAndroidPackage /p:AndroidUseSharedRuntime=false /p:EmbedAssembliesIntoApk=True /p:SolutionDir=\"${workspace}/\"")
           dir("bin/${configuration}") {
             stash includes: 'io.realm.xamarintests-Signed.apk', name: 'android-tests-sync'
           }
         }
-
-        stash includes: "Platform.XamarinAndroid/Realm.Sync.XamarinAndroid/bin/${configuration}/Realm.Sync.*", name: 'nuget-android-sync'
       }
     },
     'PCL': {
       nodeWithCleanup('xamarin-mac') {
         getArchive()
-        sh "${nuget} restore Realm.sln"
-        xbuildSafe("${xbuild} Platform.PCL/Realm.Sync.PCL/Realm.Sync.PCL.csproj /p:Configuration=${configuration}")
+        xbuild("Platform.PCL/Realm.Sync.PCL/Realm.Sync.PCL.csproj /p:Configuration=${configuration}")
         stash includes: "Platform.PCL/Realm.Sync.PCL/bin/${configuration}/Realm.Sync.*", name: 'nuget-pcl-sync'
       }
     }
-  )
-}
-
-stage('Test without sync') {
-  parallel(
-    'iOS': iOSTest('ios-tests-nosync'),
-    'Android': AndroidTest('android-tests-nosync'),
-    'Win32': Win32Test('win32-tests-nosync')
   )
 }
 
@@ -222,7 +266,7 @@ def Win32Test(stashName) {
       unstash stashName
 
       def nunit = "${env.WORKSPACE}\\packages\\NUnit.ConsoleRunner.3.2.1\\tools\\nunit3-console.exe"
-      dir("Platform.Win32/Tests.Win32/bin/${configuration}") {
+      dir("Tests/Tests.Win32/bin/${configuration}") {
         try {
           withEnv(["TMP=${env.WORKSPACE}\\temp"]) {
             bat """
@@ -323,16 +367,15 @@ stage('NuGet') {
         getArchive()
 
         unstash 'nuget-weaver'
+        unstash 'buildtasks-output'
         unstash 'nuget-pcl-database'
+        unstash 'nuget-database'
         unstash 'ios-wrappers-nosync'
-        unstash 'nuget-ios-database'
         unstash 'android-wrappers-nosync'
-        unstash 'nuget-android-database'
         unstash 'win32-wrappers-nosync'
-        unstash 'nuget-win32-database'
 
         dir('NuGet/Realm.Database') {
-          sh "${nuget} pack Realm.Database.nuspec -version ${versionString} -NoDefaultExcludes -Properties Configuration=${configuration}"
+          nuget("pack Realm.Database.nuspec -version ${versionString} -NoDefaultExcludes -Properties Configuration=${configuration}")
           archive "Realm.Database.${versionString}.nupkg"
         }
       }
@@ -342,22 +385,35 @@ stage('NuGet') {
         getArchive()
 
         unstash 'nuget-pcl-sync'
+        unstash 'nuget-sync'
         unstash 'ios-wrappers-sync'
-        unstash 'nuget-ios-sync'
         unstash 'android-wrappers-sync'
-        unstash 'nuget-android-sync'
 
         dir('NuGet/Realm') {
-          sh "${nuget} pack Realm.nuspec -version ${versionString} -NoDefaultExcludes -Properties Configuration=${configuration}"
+          nuget("pack Realm.nuspec -version ${versionString} -NoDefaultExcludes -Properties Configuration=${configuration}")
           archive "Realm.${versionString}.nupkg"
+        }
+      }
+    },
+    'DataBinding': {
+      nodeWithCleanup('xamarin-mac') {
+        getArchive()
+
+        unstash 'nuget-pcl-databinding'
+        unstash 'nuget-ios-databinding'
+        unstash 'nuget-android-databinding'
+
+        dir('NuGet/Realm.DataBinding') {
+          nuget("pack Realm.DataBinding.nuspec -version ${dataBindingVersionString} -NoDefaultExcludes -Properties Configuration=${configuration}")
+          archive "Realm.DataBinding.${dataBindingVersionString}.nupkg"
         }
       }
     }
   )
 }
 
-def readAssemblyVersion() {
-  def assemblyInfo = readFile 'RealmAssemblyInfo.cs'
+def readAssemblyVersion(String file) {
+  def assemblyInfo = readFile file
 
   def match = (assemblyInfo =~ /\[assembly: AssemblyVersion\("(\d*).(\d*).(\d*).0"\)\]/)
   if (match) {
@@ -385,14 +441,41 @@ def nodeWithCleanup(String label, Closure steps) {
   }
 }
 
-def xbuildSafe(String command) {
-  try {
-    sh "${command}"
-  } catch (err) {
-    if (err.getMessage().contains("Assertion at gc.c:910, condition `ret != WAIT_TIMEOUT' not met")) {
-      echo "StyleCop crashed. No big deal."
+def xbuild(String arguments) {
+  def exitCode = sh returnStatus: true, script: "${xbuildCmd} ${arguments} > xbuildOutput"
+  def out = readFile('xbuildOutput')
+  echo out
+  if (exitCode != 0) {
+    if (out.contains("Assertion at gc.c:910, condition `ret != WAIT_TIMEOUT' not met")) {
+      echo 'StyleCop crashed, no big deal.'
     } else {
-      throw err
+      error("xbuild failed with exit code: ${exitCode}")
+    }
+  }
+}
+
+def nuget(String arguments) {
+  withEnv(['PATH+EXTRA=/Library/Frameworks/Mono.framework/Versions/Current/Commands']) {
+    sh "${nugetCmd} ${arguments}"
+  }
+}
+
+def cmake(String binaryDir, String installPrefix, String configuration, Map arguments = [:]) {
+  def command = ''
+  for (arg in arguments) {
+    command += "-D${arg.key}=\"${arg.value}\" "
+  }
+
+  def cmakeInvocation = """
+    "${tool 'cmake'}" -DCMAKE_INSTALL_PREFIX="${installPrefix}" ${command} "${pwd()}"
+    "${tool 'cmake'}" --build . --target install --config ${configuration}
+  """
+
+  dir(binaryDir) {
+    if (isUnix()) {
+      sh cmakeInvocation
+    } else {
+      bat cmakeInvocation
     }
   }
 }

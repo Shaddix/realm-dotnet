@@ -16,6 +16,7 @@
 //
 //////////////////////////////////////////////////////////////////////////// 
 
+#include <sstream>
 #include <realm.hpp>
 #include "error_handling.hpp"
 #include "marshalling.hpp"
@@ -23,6 +24,8 @@
 #include "realm_export_decls.hpp"
 #include "results.hpp"
 #include "object_accessor.hpp"
+#include "wrapper_exceptions.hpp"
+#include "object-store/src/thread_safe_reference.hpp"
 
 using namespace realm;
 using namespace realm::binding;
@@ -52,8 +55,8 @@ REALM_EXPORT Object* results_get_row(Results* results_ptr, size_t ndx, NativeExc
             
             return new Object(results_ptr->get_realm(), results_ptr->get_object_schema(), results_ptr->get(ndx));
         }
-        catch (std::out_of_range &exp) {
-            return static_cast<Object*>(nullptr);
+        catch (realm::Results::OutOfBoundsIndexException &exp) {
+            throw IndexOutOfRangeException("Get from RealmResults", exp.requested, exp.valid_count);
         }
     });
 }
@@ -102,6 +105,20 @@ REALM_EXPORT Query* results_get_query(Results* results_ptr, NativeException::Mar
 {
     return handle_errors(ex, [&]() {
         return new Query(results_ptr->get_query());
+    });
+}
+    
+REALM_EXPORT bool results_get_is_valid(const Results& results, NativeException::Marshallable& ex)
+{
+    return handle_errors(ex, [&]() {
+        return results.is_valid();
+    });
+}
+
+REALM_EXPORT ThreadSafeReference<Results>* results_get_thread_safe_reference(const Results& results, NativeException::Marshallable& ex)
+{
+    return handle_errors(ex, [&]() {
+        return new ThreadSafeReference<Results>{results.get_realm()->obtain_thread_safe_reference(results)};
     });
 }
 
