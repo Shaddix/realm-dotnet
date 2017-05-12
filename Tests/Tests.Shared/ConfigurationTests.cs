@@ -24,12 +24,12 @@ using Realms.Exceptions;
 
 using ExplicitAttribute = NUnit.Framework.ExplicitAttribute;
 
-namespace IntegrationTests
+namespace Tests.Database
 {
     [TestFixture, Preserve(AllMembers = true)]
     public class ConfigurationTests
     {
-        private void ReliesOnEncryption()
+        private static void ReliesOnEncryption()
         {
 #if ENCRYPTION_DISABLED
             Assert.Ignore("This test relies on encryption which is not enabled in this build");
@@ -54,7 +54,7 @@ namespace IntegrationTests
 
             // Assert
             Assert.That(Path.IsPathRooted(config.DatabasePath));
-            Assert.That(config.DatabasePath, Is.StringEnding(Path.Combine("jan", "docs", "default.realm")));
+            Assert.That(config.DatabasePath, Does.EndWith(Path.Combine("jan", "docs", "default.realm")));
         }
 
         [Test]
@@ -65,7 +65,7 @@ namespace IntegrationTests
 
             // Assert
             Assert.That(Path.IsPathRooted(config.DatabasePath));
-            Assert.That(config.DatabasePath, Is.StringEnding(Path.Combine("Documents", "fred.realm")));
+            Assert.That(config.DatabasePath, Does.EndWith(Path.Combine("Documents", "fred.realm")));
             Assert.IsFalse(config.DatabasePath.Contains(".."));  // our use of relative up and down again was normalised out
         }
 
@@ -77,7 +77,7 @@ namespace IntegrationTests
             var config2 = config.ConfigWithPath("fred.realm");
 
             // Assert
-            Assert.That(config2.DatabasePath, Is.StringEnding("fred.realm"));
+            Assert.That(config2.DatabasePath, Does.EndWith("fred.realm"));
         }
 
         [Test]
@@ -88,7 +88,7 @@ namespace IntegrationTests
             RealmConfiguration.DefaultConfiguration = config.ConfigWithPath("fred.realm");
 
             // Assert
-            Assert.That(RealmConfiguration.DefaultConfiguration.DatabasePath, Is.StringEnding("fred.realm"));
+            Assert.That(RealmConfiguration.DefaultConfiguration.DatabasePath, Does.EndWith("fred.realm"));
         }
 
         [Test]
@@ -222,8 +222,10 @@ namespace IntegrationTests
         public void ReadOnlyFilesMustExist()
         {
             // Arrange
-            var config = new RealmConfiguration("FileNotThere.realm");
-            config.IsReadOnly = true;
+            var config = new RealmConfiguration("FileNotThere.realm")
+            {
+                IsReadOnly = true
+            };
 
             // Assert
             Assert.Throws<RealmFileNotFoundException>(() =>

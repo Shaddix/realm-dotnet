@@ -6,7 +6,7 @@
     <SharedGUID>06146619-d21c-414c-bfe3-2f59acba412e</SharedGUID>
   </PropertyGroup>
   <PropertyGroup Label="Configuration">
-    <Import_RootNamespace>IntegrationTests.Shared</Import_RootNamespace>
+    <Import_RootNamespace>Tests.Database</Import_RootNamespace>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="$(MSBuildThisFileDirectory)AccessTests.cs" />
@@ -44,16 +44,7 @@
     <Compile Include="$(MSBuildThisFileDirectory)APITests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)CollectionTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ObsoleteAPITests.cs" />
-    <Compile Include="$(MSBuildThisFileDirectory)FallbackApiTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)ThreadHandoverTests.cs" />
     <Compile Include="$(MSBuildThisFileDirectory)StringExtensionsTests.cs" />
-  </ItemGroup>
-  <ItemGroup Condition=" '$(ProjectName)' != 'IntegrationTests.Win32' ">
-    <Compile Include="$(MSBuildThisFileDirectory)TestRunner.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="$(MSBuildThisFileDirectory)nunit3-junit.xslt">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
   </ItemGroup>
 </Project>

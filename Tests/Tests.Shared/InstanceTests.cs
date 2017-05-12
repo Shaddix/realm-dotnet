@@ -26,15 +26,16 @@ using NUnit.Framework;
 using Realms;
 using Realms.Exceptions;
 
-namespace IntegrationTests
+namespace Tests.Database
 {
     [TestFixture, Preserve(AllMembers = true)]
     public class InstanceTests : RealmTest
     {
         private const string SpecialRealmName = "EnterTheMagic.realm";
 
-        public override void TearDown()
+        protected override void CustomTearDown()
         {
+            base.CustomTearDown();
             Realm.DeleteRealm(RealmConfiguration.DefaultConfiguration);
             var uniqueConfig = new RealmConfiguration(SpecialRealmName);  // for when need 2 realms or want to not use default
             Realm.DeleteRealm(uniqueConfig);
@@ -85,25 +86,32 @@ namespace IntegrationTests
         [Test]
         public void GetUniqueInstancesDifferentThreads()
         {
-            // Arrange
-            var realm1 = Realm.GetInstance();
-            Realm realm2 = realm1;  // should be reassigned by other thread
-
-            // Act
-            var t = new Thread(() =>
+            AsyncContext.Run(async () =>
+            {
+                Realm realm1 = null;
+                Realm realm2 = null;
+                try
                 {
-                    realm2 = Realm.GetInstance();
-                });
-            t.Start();
-            t.Join();
+                    // Arrange
+                    realm1 = Realm.GetInstance();
 
-            // Assert
-            Assert.That(ReferenceEquals(realm1, realm2), Is.False);
-            Assert.That(realm1.IsSameInstance(realm2), Is.False);
-            Assert.That(realm1, Is.EqualTo(realm2));  // equal and same Realm but not same instance
+                    // Act
+                    await Task.Run(() =>
+                    {
+                        realm2 = Realm.GetInstance();
+                    });
 
-            realm1.Dispose();
-            realm2.Dispose();
+                    // Assert
+                    Assert.That(ReferenceEquals(realm1, realm2), Is.False, "ReferenceEquals");
+                    Assert.That(realm1.IsSameInstance(realm2), Is.False, "IsSameInstance");
+                    Assert.That(realm1, Is.EqualTo(realm2), "IsEqualTo");  // equal and same Realm but not same instance
+                }
+                finally
+                {
+                    realm1.Dispose();
+                    realm2.Dispose();
+                }
+            });
         }
 
         [Test]
@@ -226,6 +234,52 @@ namespace IntegrationTests
             Assert.That(() => Realm.GetInstance(config), Throws.TypeOf<ArgumentException>());
         }
 
+        [TestCase(true)]
+        [TestCase(false)]
+#if WINDOWS
+        [Ignore("Compact doesn't work on Windows")]
+#endif
+        public void ShouldCompact_IsInvokedAfterOpening(bool shouldCompact)
+        {
+            var config = new RealmConfiguration($"shouldcompact.realm");
+
+            Realm.DeleteRealm(config);
+            using (var realm = Realm.GetInstance(config))
+            {
+                AddDummyData(realm);
+            }
+
+            var oldSize = new FileInfo(config.DatabasePath).Length;
+            long projectedNewSize = 0;
+            bool hasPrompted = false;
+            config.ShouldCompactOnLaunch = (totalBytes, bytesUsed) =>
+            {
+                Assert.That(totalBytes, Is.EqualTo(oldSize));
+                hasPrompted = true;
+                projectedNewSize = (long)bytesUsed;
+                return shouldCompact;
+            };
+
+            using (var realm = Realm.GetInstance(config))
+            {
+                Assert.That(hasPrompted, Is.True);
+                var newSize = new FileInfo(config.DatabasePath).Length;
+                if (shouldCompact)
+                {
+                    Assert.That(newSize, Is.LessThan(oldSize));
+
+                    // Less than 20% error in projections
+                    Assert.That((newSize - projectedNewSize) / newSize, Is.LessThan(0.2));
+                }
+                else
+                {
+                    Assert.That(newSize, Is.EqualTo(oldSize));
+                }
+
+                Assert.That(realm.All<IntPrimaryKeyWithValueObject>().Count(), Is.EqualTo(500));
+            }
+        }
+
         [TestCase(false, true)]
         [TestCase(false, false)]
 #if !ENCRYPTION_DISABLED
@@ -255,7 +309,6 @@ namespace IntegrationTests
             }
 
             var initialSize = new FileInfo(config.DatabasePath).Length;
-
             Assert.That(Realm.Compact(config));
 
             var finalSize = new FileInfo(config.DatabasePath).Length;
@@ -265,6 +318,29 @@ namespace IntegrationTests
             {
                 Assert.That(realm.All<IntPrimaryKeyWithValueObject>().Count(), Is.EqualTo(populate ? 500 : 0));
             }
+        }
+
+        [Test]
+#if !WINDOWS
+        [Ignore("Compact works on this platform")]
+#endif
+        public void Compact_OnWindows_ThrowsRealmException()
+        {
+            Assert.That(() => Realm.Compact(RealmConfiguration.DefaultConfiguration), Throws.TypeOf<RealmException>());
+        }
+
+        [Test]
+        #if !WINDOWS
+        [Ignore("Compact works on this platform")]
+        #endif
+        public void ShouldCompactOnLaunch_OnWindows_ThrowsRealmException()
+        {
+            var config = new RealmConfiguration
+            {
+                ShouldCompactOnLaunch = (totalBytes, bytesUsed) => true
+            };
+
+            Assert.That(() => Realm.GetInstance(config), Throws.TypeOf<RealmException>());
         }
 
         [Test]
@@ -291,16 +367,25 @@ namespace IntegrationTests
 #endif
         public void Compact_WhenOpenOnDifferentThread_ShouldReturnFalse()
         {
-            using (var realm = Realm.GetInstance())
+            AsyncContext.Run(async () =>
             {
-                AddDummyData(realm);
+                using (var realm = Realm.GetInstance())
+                {
+                    AddDummyData(realm);
 
-                var initialSize = new FileInfo(realm.Config.DatabasePath).Length;
-                Assert.That(() => Task.Run(() => Realm.Compact(realm.Config)).Result, Is.False);
-                var finalSize = new FileInfo(realm.Config.DatabasePath).Length;
+                    var initialSize = new FileInfo(realm.Config.DatabasePath).Length;
+                    bool? isCompacted = null;
+                    await Task.Run(() =>
+                    {
+                        isCompacted = Realm.Compact(realm.Config);
+                    });
 
-                Assert.That(finalSize, Is.EqualTo(initialSize));
-            }
+                    Assert.That(isCompacted, Is.False);
+                    var finalSize = new FileInfo(realm.Config.DatabasePath).Length;
+
+                    Assert.That(finalSize, Is.EqualTo(initialSize));
+                }
+            });
         }
 
         [Test, Ignore("Currently doesn't work. Ref #947")]

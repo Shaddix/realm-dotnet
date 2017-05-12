@@ -1,10 +1,29 @@
-1.2.1 (TBD)
+1.3.0 (TBD)
+
+### Breaking Changes
+
+### Enhancements
+- Case insensitive queries against a string property now use a new index based search. (#1380)
+- Add `User.ChangePassword` API to change the current user's password if using Realm's 'password' authentication provider. Requires any edition of the Realm Object Server 1.4.0 or later. (#1386)
+- `SyncConfiguration` now has an `EnableSSLValidation` property (default is `true`) to allow SSL validation to be specified on a per-server basis. (#1387)
+- Add `RealmConfiguration.ShouldCompactOnLaunch` callback property when configuring a Realm to determine if it should be compacted before being returned. (#1389)
+- Silence some benign linker warnings on iOS. (#1263)
+
+### Bug fixes
+- Fixed a bug where `Session.Reconnect` would not reconnect all sessions. (#1380)
+- Fixed a crash when subscribing for `PropertyChanged` multiple times. (#1380)
+- Fixed a crash when reconnecting to Object Server (#1380)
+- Fixed a crash on some Android 7.x devices when opening a realm (#1380)
+
+1.2.1 (2017-05-01)
 ------------------
 
 ### Bug fixes
 - Fixed an issue where `EntryPointNotFoundException` would be thrown on some Android devices. (#1336)
 
 ### Enhancements
+- Expose `IRealmCollection.IsValid` to indicate whether the realm collection is valid to use. (#1344)
+- Update the Fody reference which adds support for building with Mono 5. (#1364)
 
 ### Breaking Changes
 

@@ -27,7 +27,7 @@ using Nito.AsyncEx;
 using NUnit.Framework;
 using Realms;
 
-namespace IntegrationTests
+namespace Tests.Database
 {
     [TestFixture, Preserve(AllMembers = true)]
     public class NotificationTests
@@ -98,7 +98,7 @@ namespace IntegrationTests
                 Console.SetError(sw);
                 _realm.NotifyError(new Exception());
 
-                Assert.That(sw.ToString(), Contains.Substring("exception").And.ContainsSubstring("Realm.Error"));
+                Assert.That(sw.ToString(), Contains.Substring("exception").And.Contains("Realm.Error"));
                 Console.SetError(original);
             }
         }

@@ -114,7 +114,7 @@ namespace Tests.Sync
 
                 var error = result.Item2;
                 Assert.That(error.BackupFilePath, Is.Not.Null);
-                Assert.That(error.BackupFilePath, Is.StringContaining("io.realm.object-server-recovered-realms/recovered_realm"));
+                Assert.That(error.BackupFilePath, Does.Contain("io.realm.object-server-recovered-realms/recovered_realm"));
                 Assert.That(File.Exists(error.BackupFilePath), Is.False);
 
                 realm.Dispose();
@@ -145,7 +145,7 @@ namespace Tests.Sync
         }
 
         [Explicit("Fails with obscure error.")]
-        [Test, Timeout(1000)]
+        [Test]
         public void Session_Error_WhenInvalidRefreshToken()
         {
             AsyncContext.Run(async () =>
@@ -176,7 +176,7 @@ namespace Tests.Sync
         }
 
         [Explicit("Fails with obscure error.")]
-        [Test, Timeout(1000)]
+        [Test]
         public void Session_Error_WhenInvalidAccessToken()
         {
             AsyncContext.Run(async () =>

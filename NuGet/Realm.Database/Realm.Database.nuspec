@@ -17,13 +17,13 @@
     <tags>Realm database db persistence sqlite</tags>
     <dependencies>
       <group targetFramework="portable-net45+sl5+wp8+wpa81+win8+monoandroid+Xamarin.iOS10+monotouch+Xamarin.Mac">
-        <dependency id="Fody" version="1.29.4"/>
-        <dependency id="Realm.DataBinding" version="1.0.0"/>
+        <dependency id="Fody" version="2.0.6"/>
+        <dependency id="Realm.DataBinding" version="1.1.0"/>
       </group>
       <group targetFramework="netstandard1.4">
-        <dependency id="Fody" version="1.29.4"/>
-        <dependency id="Realm.DataBinding" version="1.0.0"/>
-        <dependency id="DotNetCross.Memory.Unsafe" version="0.2.2"/>
+        <dependency id="Fody" version="2.0.6"/>
+        <dependency id="Realm.DataBinding" version="1.1.0"/>
+        <dependency id="DotNetCross.Memory.Unsafe" version="0.2.3.4"/>
         <dependency id="Remotion.Linq" version="2.1.1"/>
         <dependency id="NETStandard.Library" version="1.6.1" />
       </group>
@@ -52,5 +52,9 @@
 <!-- Win32 files -->
     <file src="../../wrappers/build/Windows/$Configuration$-Win32/realm-wrappers.dll" target="native/win32/x86" />
     <file src="../../wrappers/build/Windows/$Configuration$-x64/realm-wrappers.dll" target="native/win32/x64" />
+<!-- UWP files -->
+    <file src="../../wrappers/build/WindowsStore/$Configuration$-Win32/realm-wrappers.dll" target="runtimes/win10-x86/native" />
+    <file src="../../wrappers/build/WindowsStore/$Configuration$-x64/realm-wrappers.dll" target="runtimes/win10-x64/native" />
+    <file src="../../wrappers/build/WindowsStore/$Configuration$-ARM/realm-wrappers.dll" target="runtimes/win10-arm/native" />
   </files>
 </package>

@@ -18,10 +18,13 @@
 
 using System;
 using System.Collections.Generic;
+using System.Net;
+using Nito.AsyncEx;
 using NUnit.Framework;
 using Realms;
 using Realms.Exceptions;
 using Realms.Sync;
+using Realms.Sync.Exceptions;
 
 namespace Tests.Sync
 {
@@ -52,21 +55,27 @@ namespace Tests.Sync
         }
 
         [Test]
-        public async void UserCurrent_WhenThereIsOneUser_ShouldReturnThatUser()
+        public void UserCurrent_WhenThereIsOneUser_ShouldReturnThatUser()
         {
-            var user = await User.LoginAsync(Credentials.AccessToken("foo:bar", Guid.NewGuid().ToString(), true), new Uri("http://localhost:9080"));
-            var currentUser = User.Current;
+            AsyncContext.Run(async () =>
+            {
+                var user = await User.LoginAsync(Credentials.AccessToken("foo:bar", Guid.NewGuid().ToString(), true), new Uri("http://localhost:9080"));
+                var currentUser = User.Current;
 
-            Assert.That(currentUser, Is.EqualTo(user));
+                Assert.That(currentUser, Is.EqualTo(user));
+            });
         }
 
         [Test]
-        public async void UserCurrent_WhenThereIsMoreThanOneUser_ShouldThrow()
+        public void UserCurrent_WhenThereIsMoreThanOneUser_ShouldThrow()
         {
-            await User.LoginAsync(Credentials.AccessToken("foo:bar", Guid.NewGuid().ToString(), true), new Uri("http://localhost:9080"));
-            await User.LoginAsync(Credentials.AccessToken("bar:foo", Guid.NewGuid().ToString(), true), new Uri("http://localhost:9080"));
+            AsyncContext.Run(async () =>
+            {
+                await User.LoginAsync(Credentials.AccessToken("foo:bar", Guid.NewGuid().ToString(), true), new Uri("http://localhost:9080"));
+                await User.LoginAsync(Credentials.AccessToken("bar:foo", Guid.NewGuid().ToString(), true), new Uri("http://localhost:9080"));
 
-            Assert.That(() => User.Current, Throws.TypeOf<RealmException>());
+                Assert.That(() => User.Current, Throws.TypeOf<RealmException>());
+            });
         }
 
         [Test]
@@ -78,28 +87,74 @@ namespace Tests.Sync
         }
 
         [Test]
-        public async void UserAllLoggedIn_WhenThereIsOneUser_ShouldReturnThatUser()
+        public void UserAllLoggedIn_WhenThereIsOneUser_ShouldReturnThatUser()
         {
-            var user = await User.LoginAsync(Credentials.AccessToken("foo:bar", Guid.NewGuid().ToString(), true), new Uri("http://localhost:9080"));
+            AsyncContext.Run(async () =>
+            {
+                var user = await User.LoginAsync(Credentials.AccessToken("foo:bar", Guid.NewGuid().ToString(), true), new Uri("http://localhost:9080"));
 
-            var users = User.AllLoggedIn;
+                var users = User.AllLoggedIn;
 
-            Assert.That(users.Length, Is.EqualTo(1));
-            Assert.That(users[0], Is.EqualTo(user));
+                Assert.That(users.Length, Is.EqualTo(1));
+                Assert.That(users[0], Is.EqualTo(user));
+            });
         }
 
         [Test]
-        public async void UserAllLoggedIn_WhenThereAreNineUsers_ShouldReturnAllOfThem()
+        public void UserAllLoggedIn_WhenThereAreNineUsers_ShouldReturnAllOfThem()
         {
-            var users = new List<User>();
-            for (var i = 0; i < 9; i++)
+            AsyncContext.Run(async () =>
             {
-                users.Add(await User.LoginAsync(Credentials.AccessToken("foo:bar" + i, Guid.NewGuid().ToString(), true), new Uri("http://localhost:9080")));
-            }
+                var users = new List<User>();
+                for (var i = 0; i < 9; i++)
+                {
+                    users.Add(await User.LoginAsync(Credentials.AccessToken("foo:bar" + i, Guid.NewGuid().ToString(), true), new Uri("http://localhost:9080")));
+                }
 
-            var current = User.AllLoggedIn;
+                var current = User.AllLoggedIn;
 
-            Assert.That(current, Is.EquivalentTo(users));
+                Assert.That(current, Is.EquivalentTo(users));
+            });
+        }
+
+        #if !ROS_SETUP
+        [NUnit.Framework.Explicit]
+        #endif
+        [Test]
+        public void UserChangePasswordTest()
+        {
+            AsyncContext.Run(async () =>
+            {
+                var userId = Guid.NewGuid().ToString();
+                var serverUri = new Uri($"http://{Constants.ServerUrl}");
+                var credentials = Credentials.UsernamePassword(userId, "a", createUser: true);
+                var user = await User.LoginAsync(credentials, serverUri);
+                await user.ChangePassword("b");
+                user.LogOut();
+
+                Assert.That(async () => await user.ChangePassword("c"), Throws.TypeOf<InvalidOperationException>());
+
+                // Try to login with the same credentials
+                try
+                {
+                    await User.LoginAsync(credentials, serverUri);
+                    Assert.Fail("Should be impossible to login with old password");
+                }
+                catch (Exception ex)
+                {
+                    Assert.That(ex, Is.TypeOf<AuthenticationException>());
+                    var authEx = (AuthenticationException)ex;
+                    Assert.That(authEx.ErrorCode, Is.EqualTo(ErrorCode.InvalidCredentials));
+                }
+
+                var newCredentials = Credentials.UsernamePassword(userId, "b", createUser: false);
+                var newUser = await User.LoginAsync(newCredentials, serverUri);
+
+                Assert.That(newUser.State, Is.EqualTo(UserState.Active));
+                Assert.That(newUser, Is.EqualTo(User.Current));
+                newUser.LogOut();
+                Assert.That(User.Current, Is.Null);
+            });
         }
     }
 }

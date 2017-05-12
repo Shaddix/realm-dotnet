@@ -398,6 +398,8 @@ namespace RealmWeaver
                     break;
                 case ".NETStandard":
                 case ".NETPortable":
+                case ".NETCore":
+                case ".NETCoreApp":
                     references = new NETPortable(module);
                     break;
                 default:
@@ -421,7 +423,7 @@ namespace RealmWeaver
                         var dataBindingAssembly = module.AssemblyReferences.SingleOrDefault(r => r.Name == "Realm.DataBinding");
                         if (dataBindingAssembly == null)
                         {
-                            dataBindingAssembly = new AssemblyNameReference("Realm.DataBinding", new Version(1, 0, 0, 0));
+                            dataBindingAssembly = new AssemblyNameReference("Realm.DataBinding", new Version(1, 1, 0, 0));
                             module.AssemblyReferences.Add(dataBindingAssembly);
                         }
                         references.InitializeDataBinding(dataBindingAssembly);

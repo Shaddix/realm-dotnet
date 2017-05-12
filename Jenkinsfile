@@ -4,10 +4,10 @@ wrapperConfigurations = [
 ]
 configuration = 'Release'
 
-xbuildCmd = '/usr/local/bin/xbuild'
-nugetCmd = '/usr/local/bin/nuget'
+xbuildCmd = '/Library/Frameworks/Mono.framework/Versions/Current/Commands/xbuild'
+nugetCmd = '/Library/Frameworks/Mono.framework/Versions/Current/Commands/nuget'
 def windowsNugetCmd = 'C:\\ProgramData\\chocolatey\\bin\\NuGet.exe'
-def mono = '/usr/local/bin/mono'
+def mono = '/Library/Frameworks/Mono.framework/Versions/Current/Commands/mono'
 
 def version
 def versionString
@@ -35,6 +35,15 @@ stage('Checkout') {
       dataBindingVersionString = "${dataBindingVersion.major}.${dataBindingVersion.minor}.${dataBindingVersion.patch}"
 
       nuget('restore Realm.sln')
+      dir('Realm/Realm') {
+        sh "${tool 'msbuild'} Realm.csproj /t:restore"
+      }
+      dir('Realm/Realm.Sync') {
+        sh "${tool 'msbuild'} Realm.Sync.csproj /t:restore"
+      }
+      dir('DataBinding/Realm.DataBinding.PCL') {
+        sh "${tool 'msbuild'} Realm.DataBinding.PCL.csproj /t:restore"
+      }
 
       stash includes: '**', name: 'dotnet-source'
       deleteDir()
@@ -94,13 +103,13 @@ stage('Build without sync') {
         unstash 'buildtasks-output'
         unstash 'tools-weaver'
 
-        xbuild("Tests/Tests.XamarinIOS/Tests.XamarinIOS.csproj /p:RealmNoSync=true /p:Configuration=${configuration} /p:Platform=iPhoneSimulator /p:SolutionDir=\"${workspace}/\"")
+        xbuild("Tests/Tests.iOS/Tests.iOS.csproj /p:RealmNoSync=true /p:Configuration=${configuration} /p:Platform=iPhoneSimulator /p:SolutionDir=\"${workspace}/\"")
 
         stash includes: "Realm/Realm/bin/${configuration}/Realm.*", name: 'nuget-database'
         stash includes: "DataBinding/Realm.DataBinding.iOS/bin/${configuration}/Realm.DataBinding.*", name: 'nuget-ios-databinding'
 
-        dir("Tests/Tests.XamarinIOS/bin/iPhoneSimulator/${configuration}") {
-          stash includes: 'Tests.XamarinIOS.app/**/*', name: 'ios-tests-nosync'
+        dir("Tests/Tests.iOS/bin/iPhoneSimulator/${configuration}") {
+          stash includes: 'Tests.iOS.app/**/*', name: 'ios-tests-nosync'
         }
       }
     },
@@ -123,11 +132,11 @@ stage('Build without sync') {
         unstash 'android-wrappers-nosync'
         unstash 'tools-weaver'
 
-        xbuild("Tests/Tests.XamarinAndroid/Tests.XamarinAndroid.csproj /p:RealmNoSync=true /p:Configuration=${configuration} /t:SignAndroidPackage /p:AndroidUseSharedRuntime=false /p:EmbedAssembliesIntoApk=True /p:SolutionDir=\"${workspace}/\"")
+        xbuild("Tests/Tests.Android/Tests.Android.csproj /p:RealmNoSync=true /p:Configuration=${configuration} /t:SignAndroidPackage /p:AndroidUseSharedRuntime=false /p:EmbedAssembliesIntoApk=True /p:SolutionDir=\"${workspace}/\"")
 
         stash includes: "DataBinding/Realm.DataBinding.Android/bin/${configuration}/Realm.DataBinding.*", name: 'nuget-android-databinding'
 
-        dir("Tests/Tests.XamarinAndroid/bin/${configuration}") {
+        dir("Tests/Tests.Android/bin/${configuration}") {
           stash includes: 'io.realm.xamarintests-Signed.apk', name: 'android-tests-nosync'
         }
       }
@@ -143,6 +152,8 @@ stage('Build without sync') {
           cmake 'build-x64', "${pwd()}\\build", configuration, [ 'CMAKE_GENERATOR_PLATFORM': 'x64' ]
         }
 
+        archive 'wrappers/build/**/*.pdb'
+
         bat """
           "${windowsNugetCmd}" restore Realm.sln
           "${tool 'msbuild'}" Tests/Tests.Win32/Tests.Win32.csproj /p:Configuration=${configuration} /p:SolutionDir="${workspace}/"
@@ -157,12 +168,13 @@ stage('Build without sync') {
         getArchive()
 
         dir('wrappers') {
-          //cmake 'build-win32', "${pwd()}\\build", configuration, [ 'CMAKE_GENERATOR_PLATFORM': 'Win32', 'CMAKE_SYSTEM_NAME': 'WindowsStore', 'CMAKE_SYSTEM_VERSION': '10.0' ]
+          cmake 'build-win32', "${pwd()}\\build", configuration, [ 'CMAKE_GENERATOR_PLATFORM': 'Win32', 'CMAKE_SYSTEM_NAME': 'WindowsStore', 'CMAKE_SYSTEM_VERSION': '10.0' ]
           cmake 'build-x64', "${pwd()}\\build", configuration, [ 'CMAKE_GENERATOR_PLATFORM': 'x64', 'CMAKE_SYSTEM_NAME': 'WindowsStore', 'CMAKE_SYSTEM_VERSION': '10.0' ]
           cmake 'build-arm', "${pwd()}\\build", configuration, [ 'CMAKE_GENERATOR_PLATFORM': 'ARM', 'CMAKE_SYSTEM_NAME': 'WindowsStore', 'CMAKE_SYSTEM_VERSION': '10.0' ]
         }
 
-        archive 'build/**/*'
+        archive 'wrappers/build/**/*.pdb'
+        stash includes: 'wrappers/build/**/*.dll', name: 'uwp-wrappers-nosync'
       }
     },
     'PCL': {
@@ -206,12 +218,12 @@ stage('Build with sync') {
         unstash 'buildtasks-output'
         unstash 'tools-weaver'
 
-        xbuild("Tests/Tests.XamarinIOS/Tests.XamarinIOS.csproj /p:Configuration=${configuration} /p:Platform=iPhoneSimulator /p:SolutionDir=\"${workspace}/\"")
+        xbuild("Tests/Tests.iOS/Tests.iOS.csproj /p:Configuration=${configuration} /p:Platform=iPhoneSimulator /p:SolutionDir=\"${workspace}/\"")
 
         stash includes: "Realm/Realm.Sync/bin/${configuration}/Realm.Sync.*", name: 'nuget-sync'
 
-        dir("Tests/Tests.XamarinIOS/bin/iPhoneSimulator/${configuration}") {
-          stash includes: 'Tests.XamarinIOS.app/**/*', name: 'ios-tests-sync'
+        dir("Tests/Tests.iOS/bin/iPhoneSimulator/${configuration}") {
+          stash includes: 'Tests.iOS.app/**/*', name: 'ios-tests-sync'
         }
       }
     },
@@ -234,8 +246,8 @@ stage('Build with sync') {
         unstash 'android-wrappers-sync'
         unstash 'tools-weaver'
 
-        dir('Tests/Tests.XamarinAndroid') {
-          xbuild("Tests.XamarinAndroid.csproj /p:Configuration=${configuration} /t:SignAndroidPackage /p:AndroidUseSharedRuntime=false /p:EmbedAssembliesIntoApk=True /p:SolutionDir=\"${workspace}/\"")
+        dir('Tests/Tests.Android') {
+          xbuild("Tests.Android.csproj /p:Configuration=${configuration} /t:SignAndroidPackage /p:AndroidUseSharedRuntime=false /p:EmbedAssembliesIntoApk=True /p:SolutionDir=\"${workspace}/\"")
           dir("bin/${configuration}") {
             stash includes: 'io.realm.xamarintests-Signed.apk', name: 'android-tests-sync'
           }
@@ -288,12 +300,14 @@ def iOSTest(stashName) {
     nodeWithCleanup('osx') {
       unstash stashName
 
-      dir('Tests.XamarinIOS.app') {
-        sh '''
-          mkdir -p fakehome/Documents
-          HOME=`pwd`/fakehome DYLD_ROOT_PATH=`xcrun -show-sdk-path -sdk iphonesimulator` ./Tests.XamarinIOS --headless
-        '''
-        publishTests 'fakehome/Documents/TestResults.iOS.xml'
+      def workspace = pwd()
+      try {
+        sh 'mkdir -p temp'
+        runSimulator('Tests.iOS.app', ' io.realm.xamarintests', "--headless --resultpath ${workspace}/temp/TestResults.iOS.xml")
+      } finally {
+        dir ("${workspace}/temp") {
+          junit 'TestResults.iOS.xml'
+        }
       }
     }
   }
@@ -308,6 +322,7 @@ def AndroidTest(stashName) {
         boolean archiveLog = true
         String backgroundPid
 
+        def workspace = pwd()
         try {
           backgroundPid = startLogCatCollector()
 
@@ -316,10 +331,12 @@ def AndroidTest(stashName) {
             adb install io.realm.xamarintests-Signed.apk
           '''
 
-          def instrumentationOutput = sh script: '''
+          def instrumentationOutput = sh script: """
+            mkdir -p ${workspace}/temp
             adb shell am instrument -w -r io.realm.xamarintests/.TestRunner
-            adb shell run-as io.realm.xamarintests cat /data/data/io.realm.xamarintests/files/TestResults.Android.xml > TestResults.Android.xml
-          ''', returnStdout: true
+            adb pull /storage/sdcard0/RealmTests/TestResults.Android.xml ${workspace}/temp/
+            adb shell rm /sdcard/Realmtests/TestResults.Android.xml
+          """, returnStdout: true
 
           def result = readProperties text: instrumentationOutput.trim().replaceAll(': ', '=')
           if (result.INSTRUMENTATION_CODE != '-1') {
@@ -334,7 +351,9 @@ def AndroidTest(stashName) {
         }
       }
 
-      publishTests()
+      dir ("${workspace}/temp") {
+        junit 'TestResults.Android.xml'
+      }
     }
   }
 }
@@ -373,6 +392,7 @@ stage('NuGet') {
         unstash 'ios-wrappers-nosync'
         unstash 'android-wrappers-nosync'
         unstash 'win32-wrappers-nosync'
+        unstash 'uwp-wrappers-nosync'
 
         dir('NuGet/Realm.Database') {
           nuget("pack Realm.Database.nuspec -version ${versionString} -NoDefaultExcludes -Properties Configuration=${configuration}")
@@ -437,6 +457,43 @@ def nodeWithCleanup(String label, Closure steps) {
       steps()
     } finally {
       deleteDir()
+    }
+  }
+}
+
+def runSimulator(String appPath, String bundleId, String arguments) {
+  def id = UUID.randomUUID().toString().replace('-', '')
+  try {
+    def runtimes = sh returnStdout: true, script: 'xcrun simctl list devicetypes runtimes'
+
+    def runtimeId;
+
+    def runtimeMatcher = (runtimes =~ /iOS.*\((?<runtimeId>com.apple.CoreSimulator.SimRuntime.iOS[^\)]*)\)/)
+    if (runtimeMatcher) {
+      runtimeId = runtimeMatcher[0][1]
+    } else {
+      error('Failed to find iOS runtime.')
+    }
+
+    runtimeMatcher = null
+
+    sh """
+      xcrun simctl create ${id} com.apple.CoreSimulator.SimDeviceType.iPhone-7 ${runtimeId}
+      xcrun simctl boot ${id}
+      xcrun simctl install ${id} ${appPath}
+      xcrun simctl launch --console ${id} ${bundleId} ${arguments}
+    """
+  } catch (e) {
+    echo e.toString()
+    throw e
+  } finally {
+    try
+    {
+      sh """
+        xcrun simctl shutdown ${id}
+        xcrun simctl delete ${id}
+      """
+    } catch (error) {
     }
   }
 }

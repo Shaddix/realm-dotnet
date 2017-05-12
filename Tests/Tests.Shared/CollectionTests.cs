@@ -1,4 +1,4 @@
-﻿////////////////////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////////
 //
 // Copyright 2016 Realm Inc.
 //
@@ -22,7 +22,7 @@ using System.Linq;
 using NUnit.Framework;
 using Realms;
 
-namespace IntegrationTests
+namespace Tests.Database
 {
     [TestFixture, Preserve(AllMembers = true)]
     public class CollectionTests : RealmInstanceTest
@@ -179,6 +179,42 @@ namespace IntegrationTests
 
             Assert.That(() => owner.Dogs.AsRealmCollection()[-1], Throws.TypeOf<ArgumentOutOfRangeException>());
             Assert.That(() => owner.Dogs.AsRealmCollection()[0], Throws.TypeOf<ArgumentOutOfRangeException>());
+        }
+
+        [Test]
+        public void List_WhenRealmIsClosed_ShouldBeInvalid()
+        {
+            var container = GetPopulatedManagedContainerObject();
+
+            Assert.That(container.Items.AsRealmCollection().IsValid);
+
+            _realm.Dispose();
+
+            Assert.That(container.Items.AsRealmCollection().IsValid, Is.False);
+        }
+
+        [Test]
+        public void List_WhenParentIsDeleted_ShouldBeInvalid()
+        {
+            var container = GetPopulatedManagedContainerObject();
+
+            Assert.That(container.Items.AsRealmCollection().IsValid);
+
+            _realm.Write(() => _realm.Remove(container));
+
+            Assert.That(container.Items.AsRealmCollection().IsValid, Is.False);
+        }
+
+        [Test]
+        public void Results_WhenRealmIsClosed_ShouldBeInvalid()
+        {
+            var items = _realm.All<IntPropertyObject>();
+
+            Assert.That(items.AsRealmCollection().IsValid);
+
+            _realm.Dispose();
+
+            Assert.That(items.AsRealmCollection().IsValid, Is.False);
         }
 
         private ContainerObject GetPopulatedManagedContainerObject()

@@ -23,15 +23,14 @@ using Realms;
 
 using ExplicitAttribute = NUnit.Framework.ExplicitAttribute;
 
-namespace IntegrationTests
+namespace Tests.Database
 {
     [TestFixture, Preserve(AllMembers = true)]
     internal class SimpleLINQtests : PeopleTestsBase
     {
-        // see comment on base method why this isn't decorated with [SetUp]
-        public override void SetUp()
+        protected override void CustomSetUp()
         {
-            base.SetUp();
+            base.CustomSetUp();
             MakeThreePeople();
         }
 
@@ -560,6 +559,8 @@ namespace IntegrationTests
                 _realm.All<Person>().Where(p => p.FirstName.Equals("patrick", StringComparison.CurrentCultureIgnoreCase)).Count();
             }, Throws.TypeOf<NotSupportedException>());
 
+#if !WINDOWS_UWP
+
             Assert.That(() =>
             {
                 _realm.All<Person>().Where(p => p.FirstName.Equals("patrick", StringComparison.InvariantCulture)).Count();
@@ -569,6 +570,8 @@ namespace IntegrationTests
             {
                 _realm.All<Person>().Where(p => p.FirstName.Equals("patrick", StringComparison.InvariantCultureIgnoreCase)).Count();
             }, Throws.TypeOf<NotSupportedException>());
+
+#endif
 
             Assert.That(() =>
             {

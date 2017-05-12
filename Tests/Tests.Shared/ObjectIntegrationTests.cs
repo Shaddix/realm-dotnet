@@ -19,13 +19,14 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using System.Reflection;
 using NUnit.Framework;
 using Realms;
 using Realms.Exceptions;
 
 using ExplicitAttribute = NUnit.Framework.ExplicitAttribute;
 
-namespace IntegrationTests
+namespace Tests.Database
 {
     [TestFixture, Preserve(AllMembers = true)]
     public class ObjectIntegrationTests : PeopleTestsBase
