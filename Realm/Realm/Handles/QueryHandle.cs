@@ -208,6 +208,12 @@ namespace Realms
             [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_link_add_long_comparison", CallingConvention = CallingConvention.Cdecl)]
             public static extern void link_add_long_comparison(QueryHandle queryPtr, IntPtr[] linkColumnIndexes, IntPtr linkColumnIndexesLength, IntPtr columnIndex, IntPtr predicateOperator, Int64 value, out NativeException ex);
 
+            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_link_add_null_equal", CallingConvention = CallingConvention.Cdecl)]
+            public static extern void link_add_null_equal(QueryHandle queryPtr, IntPtr[] linkColumnIndexes, IntPtr linkColumnIndexesLength, IntPtr columnIndex, out NativeException ex);
+
+            [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_link_add_null_not_equal", CallingConvention = CallingConvention.Cdecl)]
+            public static extern void link_add_null_not_equal(QueryHandle queryPtr, IntPtr[] linkColumnIndexes, IntPtr linkColumnIndexesLength, IntPtr columnIndex, out NativeException ex);
+
             [DllImport(InteropConfig.DLL_NAME, EntryPoint = "query_not", CallingConvention = CallingConvention.Cdecl)]
             public static extern void not(QueryHandle queryHandle, out NativeException ex);
 
@@ -653,7 +659,21 @@ namespace Realms
         public void CreateLinkQueryBool(IntPtr[] linkColumnIndexes, IntPtr columnIndex, PredicateOperator predicateOperator, bool value)
         {
             NativeException nativeException;
-            NativeMethods.link_add_bool_comparison(this, linkColumnIndexes, new IntPtr(linkColumnIndexes.Length), columnIndex, new IntPtr((int)predicateOperator), new IntPtr(value ? 0 : 1), out nativeException);
+            NativeMethods.link_add_bool_comparison(this, linkColumnIndexes, new IntPtr(linkColumnIndexes.Length), columnIndex, new IntPtr((int)predicateOperator), MarshalHelpers.BoolToIntPtr(value), out nativeException);
+            nativeException.ThrowIfNecessary();
+        }
+
+        public void CreateLinkQueryNull(IntPtr[] linkColumnIndexes, IntPtr columnIndex)
+        {
+            NativeException nativeException;
+            NativeMethods.link_add_null_equal(this, linkColumnIndexes, new IntPtr(linkColumnIndexes.Length), columnIndex, out nativeException);
+            nativeException.ThrowIfNecessary();
+        }
+
+        public void CreateLinkQueryNotNull(IntPtr[] linkColumnIndexes, IntPtr columnIndex)
+        {
+            NativeException nativeException;
+            NativeMethods.link_add_null_not_equal(this, linkColumnIndexes, new IntPtr(linkColumnIndexes.Length), columnIndex, out nativeException);
             nativeException.ThrowIfNecessary();
         }
 

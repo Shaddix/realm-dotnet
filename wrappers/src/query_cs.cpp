@@ -628,6 +628,28 @@ REALM_EXPORT void query_link_add_double_comparison(Query * query_ptr, size_t* li
 	});
 }
 
+REALM_EXPORT void query_link_add_null_equal(Query * query_ptr, size_t* link_column_indexes, size_t link_column_indexes_length, size_t columnIndex, NativeException::Marshallable& ex)
+{
+	return handle_errors(ex, [&]() {
+		Table* table = link_table(query_ptr, link_column_indexes, link_column_indexes_length);
+
+		query_ptr->equal(columnIndex, null());
+
+		return;
+	});
+}
+
+REALM_EXPORT void query_link_add_null_not_equal(Query * query_ptr, size_t* link_column_indexes, size_t link_column_indexes_length, size_t columnIndex, NativeException::Marshallable& ex)
+{
+	return handle_errors(ex, [&]() {
+		Table* table = link_table(query_ptr, link_column_indexes, link_column_indexes_length);
+
+		query_ptr->not_equal(columnIndex, null());
+
+		return;
+	});
+}
+
 REALM_EXPORT void query_link_add_float_comparison(Query * query_ptr, size_t* link_column_indexes, size_t link_column_indexes_length, size_t columnIndex, PredicateOperator predicateOperator, float value, NativeException::Marshallable& ex)
 {
 	return handle_errors(ex, [&]() {
