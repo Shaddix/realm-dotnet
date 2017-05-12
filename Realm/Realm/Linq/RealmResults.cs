@@ -124,7 +124,23 @@ namespace Realms
                         i++;
                     }
                     var lastPropertyId = propertyIndexes.Pop();
-                    if (property.Type == Realms.Schema.PropertyType.String)
+                    if (linkedQueryInfo.Value == null)
+                    {
+                        if (linkedQueryInfo.PredicateOperator == PredicateOperator.Equal)
+                        {
+                            query.CreateLinkQueryNull(propertyIndexes.ToArray(), lastPropertyId);
+                        }
+                        else if (linkedQueryInfo.PredicateOperator == PredicateOperator.NotEqual)
+                        {
+                            query.CreateLinkQueryNotNull(propertyIndexes.ToArray(), lastPropertyId);
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException($"Can't perform {linkedQueryInfo.PredicateOperator} operaion on null");
+                        }
+
+                    }
+                    else if (property.Type == Realms.Schema.PropertyType.String)
                     {
                         query.CreateLinkQueryString(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (string)linkedQueryInfo.Value, false);
                     }
