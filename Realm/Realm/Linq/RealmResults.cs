@@ -114,8 +114,12 @@ namespace Realms
                         {
                             throw new InvalidOperationException($"{propertyName} not found");
                         }
-
-                        propertyIndexes.Push(metadata.Table.GetColumnIndex(propertyName));
+                        var columnIndex = metadata.Table.GetColumnIndex(propertyName);
+                        if (columnIndex.ToInt32() == -1)
+                        {
+                            throw new InvalidOperationException($"{propertyName} is a backlink, queries are not supported yet");
+                        }
+                        propertyIndexes.Push(columnIndex);
 
                         if (i < propertyPath.Length - 1)
                         {
@@ -124,45 +128,45 @@ namespace Realms
                         i++;
                     }
                     var lastPropertyId = propertyIndexes.Pop();
+                    var propertyIndexesArray = propertyIndexes.Reverse().ToArray();
                     if (linkedQueryInfo.Value == null)
                     {
                         if (linkedQueryInfo.PredicateOperator == PredicateOperator.Equal)
                         {
-                            query.CreateLinkQueryNull(propertyIndexes.ToArray(), lastPropertyId);
+                            query.CreateLinkQueryNull(propertyIndexesArray, lastPropertyId);
                         }
                         else if (linkedQueryInfo.PredicateOperator == PredicateOperator.NotEqual)
                         {
-                            query.CreateLinkQueryNotNull(propertyIndexes.ToArray(), lastPropertyId);
+                            query.CreateLinkQueryNotNull(propertyIndexesArray, lastPropertyId);
                         }
                         else
                         {
                             throw new InvalidOperationException($"Can't perform {linkedQueryInfo.PredicateOperator} operaion on null");
                         }
-
                     }
                     else if (property.Type == Realms.Schema.PropertyType.String)
                     {
-                        query.CreateLinkQueryString(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (string)linkedQueryInfo.Value, false);
+                        query.CreateLinkQueryString(propertyIndexesArray, lastPropertyId, linkedQueryInfo.PredicateOperator, (string)linkedQueryInfo.Value, false);
                     }
                     else if (property.Type == Realms.Schema.PropertyType.Int)
                     {
-                        query.CreateLinkQueryInt(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (int)linkedQueryInfo.Value);
+                        query.CreateLinkQueryInt(propertyIndexesArray, lastPropertyId, linkedQueryInfo.PredicateOperator, (int)linkedQueryInfo.Value);
                     }
                     else if (property.Type == Realms.Schema.PropertyType.Bool)
                     {
-                        query.CreateLinkQueryBool(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (bool)linkedQueryInfo.Value);
+                        query.CreateLinkQueryBool(propertyIndexesArray, lastPropertyId, linkedQueryInfo.PredicateOperator, (bool)linkedQueryInfo.Value);
                     }
                     else if (property.Type == Realms.Schema.PropertyType.Float)
                     {
-                        query.CreateLinkQueryFloat(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (float)linkedQueryInfo.Value);
+                        query.CreateLinkQueryFloat(propertyIndexesArray, lastPropertyId, linkedQueryInfo.PredicateOperator, (float)linkedQueryInfo.Value);
                     }
                     else if (property.Type == Realms.Schema.PropertyType.Double)
                     {
-                        query.CreateLinkQueryDouble(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (double)linkedQueryInfo.Value);
+                        query.CreateLinkQueryDouble(propertyIndexesArray, lastPropertyId, linkedQueryInfo.PredicateOperator, (double)linkedQueryInfo.Value);
                     }
                     else if (property.Type == Realms.Schema.PropertyType.Date)
                     {
-                        query.CreateLinkQueryDate(propertyIndexes.ToArray(), lastPropertyId, linkedQueryInfo.PredicateOperator, (DateTimeOffset)linkedQueryInfo.Value);
+                        query.CreateLinkQueryDate(propertyIndexesArray, lastPropertyId, linkedQueryInfo.PredicateOperator, (DateTimeOffset)linkedQueryInfo.Value);
                     }
                     else
                     {

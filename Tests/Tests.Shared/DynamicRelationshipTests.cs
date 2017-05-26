@@ -68,7 +68,7 @@ namespace Tests.Database
 
         protected override void CustomSetUp()
         {
-            _configuration = new RealmConfiguration 
+            _configuration = new RealmConfiguration(System.IO.Path.GetTempFileName())
             { 
                 ObjectClasses = new[] { typeof(DynamicOwner), typeof(DynamicDog) },
                 Dynamic = _mode == DynamicTestObjectType.DynamicRealmObject

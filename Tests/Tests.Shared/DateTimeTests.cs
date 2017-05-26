@@ -136,7 +136,7 @@ namespace Tests.Database
         public void IndexedDateTimeOffsetTest()
         {
             // Arrange
-            var config = new RealmConfiguration
+            var config = new RealmConfiguration(System.IO.Path.GetTempFileName())
             {
                 ObjectClasses = new[] { typeof(IndexedDateTimeOffsetObject) }
             };
