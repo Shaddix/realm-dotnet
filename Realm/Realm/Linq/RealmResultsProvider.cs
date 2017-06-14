@@ -30,6 +30,16 @@ namespace Realms
         private Realm _realm;
         private readonly RealmObject.Metadata _metadata;
 
+        internal class LinkQuery
+        {
+            public string PropertyPath { get; set; }
+
+            public PredicateOperator PredicateOperator { get; set; }
+
+            public object Value { get; set; }
+        }
+        public System.Collections.Generic.List<LinkQuery> LinkedQueries { get; set; }
+
         internal RealmResultsProvider(Realm realm, RealmObject.Metadata metadata)
         {
             _realm = realm;

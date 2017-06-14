@@ -74,7 +74,7 @@ namespace Realms
             var expression = Expression;
             if (_allRecords)
             {
-                if (_linkedQueries?.Count > 0)
+                if (_provider.LinkedQueries?.Count > 0)
                 {
                     var results = new RealmResults<T>(this.Realm, Metadata, true);
                     var query = results.CreateQuery();
@@ -99,9 +99,9 @@ namespace Realms
 
         private void AddLinkQueries(QueryHandle query)
         {
-            if (_linkedQueries != null)
+            if (_provider.LinkedQueries != null)
             {
-                foreach (var linkedQueryInfo in _linkedQueries)
+                foreach (var linkedQueryInfo in _provider.LinkedQueries)
                 {
                     var propertyPath = linkedQueryInfo.PropertyPath.Split('.');
                     var metadata = Metadata;
@@ -176,22 +176,12 @@ namespace Realms
             }
         }
 
-        private class LinkQuery
-        {
-            public string PropertyPath { get; set; }
-
-            public PredicateOperator PredicateOperator { get; set; }
-
-            public object Value { get; set; }
-        }
-
-        private System.Collections.Generic.List<LinkQuery> _linkedQueries;
 
         public void AddLinkQueryInternal<TLink>(Expression<Func<T, TLink>> property, PredicateOperator predicateOperator, TLink value)
         {
-            _linkedQueries = _linkedQueries ?? new System.Collections.Generic.List<LinkQuery>();
+            _provider.LinkedQueries = _provider.LinkedQueries ?? new System.Collections.Generic.List<RealmResultsProvider.LinkQuery>();
             var name = property.Parameters[0].Name;
-            _linkedQueries.Add(new LinkQuery()
+            _provider.LinkedQueries.Add(new RealmResultsProvider.LinkQuery()
             {
                 PropertyPath = property.ToString().Replace($"{name} => {name}.", string.Empty),
                 PredicateOperator = predicateOperator,
@@ -201,8 +191,8 @@ namespace Realms
 
         public void AddLinkQueryInternal(string propertyPath, PredicateOperator predicateOperator, object value)
         {
-            _linkedQueries = _linkedQueries ?? new System.Collections.Generic.List<LinkQuery>();
-            _linkedQueries.Add(new LinkQuery()
+            _provider.LinkedQueries = _provider.LinkedQueries ?? new System.Collections.Generic.List<RealmResultsProvider.LinkQuery>();
+            _provider.LinkedQueries.Add(new RealmResultsProvider.LinkQuery()
             {
                 PropertyPath = propertyPath,
                 PredicateOperator = predicateOperator,

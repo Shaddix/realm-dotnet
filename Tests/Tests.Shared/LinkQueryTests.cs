@@ -90,6 +90,40 @@ namespace Tests.Database
         }
 
         [Test]
+        public void WhereBeforeLinkQuery()
+        {
+            var q1 = realm.All<Owner>().Where(x => x.Name != "Tim").ToList();
+            Assert.That(q1.Count, Is.EqualTo(1));
+
+            var tim = realm.All<Owner>().Where(x => x.Name != "Tim").AddLinkQuery(x => x.TopDog.Color, PredicateOperator.Equal, "Black").ToList();
+            Assert.That(tim.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void WhereAfterLinkQuery()
+        {
+            var q1 = realm.All<Owner>().Where(x => x.Name != "Tim").ToList();
+            Assert.That(q1.Count, Is.EqualTo(1));
+
+            var tim = realm.All<Owner>().AddLinkQuery(x => x.TopDog.Color, PredicateOperator.Equal, "Black").Where(x => x.Name != "Tim").ToList();
+            Assert.That(tim.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void LinkQueryAfterDoubleWhere()
+        {
+            var tim = realm.All<Owner>().Where(x => x.Name != "zx").Where(x => x.Name != "Tim").AddLinkQuery(x => x.TopDog.Color, PredicateOperator.Equal, "Black").ToList();
+            Assert.That(tim.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void LinkQueryInWhereSandwich()
+        {
+            var tim = realm.All<Owner>().Where(x => x.Name != "zx").AddLinkQuery(x => x.TopDog.Color, PredicateOperator.Equal, "Black").Where(x => x.Name != "Tim").ToList();
+            Assert.That(tim.Count, Is.EqualTo(0));
+        }
+
+        [Test]
         public void TimHasNoWhiteTopDog()
         {
             var tim = realm.All<Owner>().AddLinkQuery(x => x.TopDog.Color, PredicateOperator.Equal, "White").FirstOrDefault();
