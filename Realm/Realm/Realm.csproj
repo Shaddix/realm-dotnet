@@ -30,6 +30,7 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="Linq\LinkQueryItem.cs" />
     <Compile Include="Linq\PredicateOperator.cs" />
     <Compile Include="Linq\RealmResultsExtensions.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

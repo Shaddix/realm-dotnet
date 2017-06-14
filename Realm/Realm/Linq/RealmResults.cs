@@ -176,12 +176,11 @@ namespace Realms
             }
         }
 
-
         public void AddLinkQueryInternal<TLink>(Expression<Func<T, TLink>> property, PredicateOperator predicateOperator, TLink value)
         {
-            _provider.LinkedQueries = _provider.LinkedQueries ?? new System.Collections.Generic.List<RealmResultsProvider.LinkQuery>();
+            _provider.LinkedQueries = _provider.LinkedQueries ?? new System.Collections.Generic.List<LinkQueryItem>();
             var name = property.Parameters[0].Name;
-            _provider.LinkedQueries.Add(new RealmResultsProvider.LinkQuery()
+            _provider.LinkedQueries.Add(new LinkQueryItem()
             {
                 PropertyPath = property.ToString().Replace($"{name} => {name}.", string.Empty),
                 PredicateOperator = predicateOperator,
@@ -191,8 +190,8 @@ namespace Realms
 
         public void AddLinkQueryInternal(string propertyPath, PredicateOperator predicateOperator, object value)
         {
-            _provider.LinkedQueries = _provider.LinkedQueries ?? new System.Collections.Generic.List<RealmResultsProvider.LinkQuery>();
-            _provider.LinkedQueries.Add(new RealmResultsProvider.LinkQuery()
+            _provider.LinkedQueries = _provider.LinkedQueries ?? new System.Collections.Generic.List<LinkQueryItem>();
+            _provider.LinkedQueries.Add(new LinkQueryItem()
             {
                 PropertyPath = propertyPath,
                 PredicateOperator = predicateOperator,

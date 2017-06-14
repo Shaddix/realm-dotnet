@@ -15,7 +15,7 @@
 // limitations under the License.
 //
 ////////////////////////////////////////////////////////////////////////////
- 
+
 using System;
 using System.Linq;
 using System.Linq.Expressions;
@@ -25,20 +25,12 @@ using Remotion.Linq.Parsing.ExpressionVisitors.TreeEvaluation;
 
 namespace Realms
 {
-    internal class RealmResultsProvider : IQueryProvider
+    internal partial class RealmResultsProvider : IQueryProvider
     {
         private Realm _realm;
         private readonly RealmObject.Metadata _metadata;
 
-        internal class LinkQuery
-        {
-            public string PropertyPath { get; set; }
-
-            public PredicateOperator PredicateOperator { get; set; }
-
-            public object Value { get; set; }
-        }
-        public System.Collections.Generic.List<LinkQuery> LinkedQueries { get; set; }
+        public System.Collections.Generic.List<LinkQueryItem> LinkedQueries { get; set; }
 
         internal RealmResultsProvider(Realm realm, RealmObject.Metadata metadata)
         {
